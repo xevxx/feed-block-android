@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">Feed Check</string>
-    <string name="service_description">Feed Check matches known Snapchat screen identifiers on this device. If feed blocking is on, it covers recognised Spotlight and Discover content with a Go back screen.</string>
+    <string name="service_description">Feed Check covers recognised Spotlight and Discover content in Snapchat. An optional parent PIN guard covers Feed Check’s own Accessibility and App Info pages in Android Settings.</string>
 </resources>

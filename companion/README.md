@@ -16,6 +16,16 @@ The service acts only when a known feed marker is visible in the focused Snapcha
 
 Feed Check temporarily mutes Android's media stream while a recognised Spotlight screen is covered. Other apps on that media stream are also quiet during this interval. The app restores the prior mute state without setting a new volume level. Reopening Feed Check recovers a pending restore if Android stopped the service abruptly.
 
+## Protect Feed Check settings
+
+This optional guard starts off. In Feed Check, tap **Protect Feed Check settings** and enter the parent PIN. While the guard is on, recognised Feed Check **App Info** and **Accessibility service detail** pages show **Parent access required**. The Android Settings home, the Accessibility list, other service details, and other apps' App Info are available normally.
+
+Use **Allow Feed Check settings for one minute** with the PIN for maintenance. Return to Android Settings during that minute. **Turn off Settings guard** also requires the PIN. This setting is independent of feed blocking.
+
+Recognition uses exact screen layout identifiers and the Feed Check label. Unrecognised Settings layouts remain accessible. The guard requires the Accessibility service to be running, and Android can still provide other ways to disable it or uninstall the app.
+
+Both pages were verified on a Huawei ELS-NX9 running Android 10 and on a stock Android 36.1 emulator. The Galaxy S21 runs One UI 7 on Android 15. On that phone, open **Settings → Accessibility → Installed apps → Feed Check** to reach its service switch. The two guarded pages still need verification on a physical S21. [Samsung One UI versions](https://www.samsung.com/us/support/answer/ANS10004612/) · [Samsung Accessibility settings](https://www.samsung.com/us/support/answer/ANS10001906/)
+
 ## Check screen identifiers
 
 Use **Start a check in Snapchat** and open the screen you want to check. Wait a few seconds, then return through Android's app switcher and read **Last Snapchat screen**. If you need to inspect a feed with the overlay off, pause it with the parent PIN first. The service checks four exact IDs and stores only the matches during a diagnostic run. It requests Snapchat events, has no network permission, and accesses neither message text nor screenshots.

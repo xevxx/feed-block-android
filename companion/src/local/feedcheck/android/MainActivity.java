@@ -23,6 +23,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Arrays;
+import java.util.function.Consumer;
 
 public final class MainActivity extends Activity {
     private static final String PIN = "parent_pin";
@@ -31,6 +32,8 @@ public final class MainActivity extends Activity {
     private TextView result;
     private Button start;
     private Button blockingButton;
+    private Button settingsGuardButton;
+    private Button temporaryAccess;
 
     @Override
     protected void onCreate(Bundle savedState) {
@@ -61,6 +64,14 @@ public final class MainActivity extends Activity {
         settings.setOnClickListener(view -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         blockingButton = button(column, "Turn on feed blocking");
         blockingButton.setOnClickListener(view -> changeBlocking());
+        settingsGuardButton = button(column, "Protect Feed Check settings");
+        settingsGuardButton.setOnClickListener(view -> changeSettingsGuard());
+        temporaryAccess = button(column, "Allow Feed Check settings for one minute");
+        temporaryAccess.setOnClickListener(view -> showPinPrompt(
+                "Allow Feed Check settings", "Allow", null, edit -> {
+                    ProtectedSettings.allowTemporarily();
+                    Toast.makeText(this, "Feed Check settings unlocked for one minute", Toast.LENGTH_SHORT).show();
+                }));
         start = button(column, "Start a check in Snapchat");
         start.setOnClickListener(view -> startCheck());
         text(column, "Open the screen you want to check. Keep it open for a few seconds, then return here.", 16);
@@ -87,6 +98,7 @@ public final class MainActivity extends Activity {
     private void refreshControls() {
         boolean enabled = serviceEnabled();
         boolean blocking = state.getBoolean(FeedCheckService.BLOCKING, false);
+        boolean settingsGuard = state.getBoolean(ProtectedSettings.ENABLED, false);
         if (enabled) {
             status.setText(blocking ? "Feed blocking is on" : "Feed blocking is off");
         } else {
@@ -95,6 +107,10 @@ public final class MainActivity extends Activity {
         start.setEnabled(enabled);
         blockingButton.setEnabled(enabled);
         blockingButton.setText(blocking ? "Pause feed blocking" : "Turn on feed blocking");
+        settingsGuardButton.setText(settingsGuard ? "Turn off Settings guard" : "Protect Feed Check settings");
+        settingsGuardButton.setEnabled(enabled || settingsGuard);
+        temporaryAccess.setVisibility(settingsGuard ? View.VISIBLE : View.GONE);
+        temporaryAccess.setEnabled(enabled);
     }
 
     private void changeBlocking() {
@@ -105,17 +121,42 @@ public final class MainActivity extends Activity {
             refreshControls();
             return;
         }
+        showPinPrompt(blocking ? "Pause feed blocking" : "Create a parent PIN", blocking ? "Pause" : "Turn on",
+                null, edit -> edit.putBoolean(FeedCheckService.BLOCKING, !blocking));
+    }
+
+    private void changeSettingsGuard() {
+        boolean enabled = state.getBoolean(ProtectedSettings.ENABLED, false);
+        showPinPrompt(enabled ? "Turn off Settings guard" : "Protect Feed Check settings",
+                enabled ? "Turn off" : "Protect", enabled ? null
+                        : "Protects only Feed Check’s Accessibility controls and App Info when Android exposes them.",
+                edit -> {
+                    ProtectedSettings.endTemporaryAccess();
+                    edit.putBoolean(ProtectedSettings.ENABLED, !enabled);
+                });
+    }
+
+    private void showPinPrompt(String title, String action, String message,
+            Consumer<SharedPreferences.Editor> applyChange) {
+        String verifier = state.getString(PIN, null);
+        boolean creating = verifier == null;
+        if (creating && (state.getBoolean(FeedCheckService.BLOCKING, false)
+                || state.getBoolean(ProtectedSettings.ENABLED, false))) {
+            Toast.makeText(this, "The parent PIN could not be loaded", Toast.LENGTH_LONG).show();
+            return;
+        }
 
         LinearLayout inputs = new LinearLayout(this);
         inputs.setOrientation(LinearLayout.VERTICAL);
         inputs.setPadding(dp(24), 0, dp(24), 0);
         EditText pin = pinField(inputs, "6-digit parent PIN");
-        EditText repeated = blocking ? null : pinField(inputs, "Repeat parent PIN");
+        EditText repeated = creating ? pinField(inputs, "Repeat parent PIN") : null;
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(blocking ? "Pause feed blocking" : "Create a parent PIN")
+                .setTitle(creating ? "Create a parent PIN" : title)
+                .setMessage(message)
                 .setView(inputs)
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton(blocking ? "Pause" : "Turn on", null)
+                .setPositiveButton(action, null)
                 .create();
         dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         dialog.show();
@@ -123,18 +164,19 @@ public final class MainActivity extends Activity {
             char[] value = readPin(pin);
             char[] confirmation = repeated == null ? new char[0] : readPin(repeated);
             try {
-                if (blocking && !ParentPin.matches(value, verifier)) {
+                if (!creating && !ParentPin.matches(value, verifier)) {
                     pin.setError("Incorrect parent PIN");
                     return;
                 }
-                if (!blocking && (!ParentPin.valid(value) || !Arrays.equals(value, confirmation))) {
+                if (creating && (!ParentPin.valid(value) || !Arrays.equals(value, confirmation))) {
                     pin.setError("Enter the same six digits twice");
                     return;
                 }
-                SharedPreferences.Editor edit = state.edit().putBoolean(FeedCheckService.BLOCKING, !blocking);
-                if (!blocking) {
+                SharedPreferences.Editor edit = state.edit();
+                if (creating) {
                     edit.putString(PIN, ParentPin.create(value));
                 }
+                applyChange.accept(edit);
                 edit.apply();
                 dialog.dismiss();
                 refreshControls();

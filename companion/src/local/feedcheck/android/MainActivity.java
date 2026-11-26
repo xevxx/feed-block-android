@@ -6,12 +6,12 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
+import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityManager;
@@ -19,80 +19,144 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public final class MainActivity extends Activity {
     private static final String PIN = "parent_pin";
+    private static final String SHOW_DIAGNOSTICS = "show_diagnostics";
     private SharedPreferences state;
     private TextView status;
-    private TextView result;
-    private Button start;
+    private TextView blockingDetail;
     private Button blockingButton;
+    private TextView settingsGuardDetail;
     private Button settingsGuardButton;
     private Button temporaryAccess;
+    private View changePinButton;
+    private AlertDialog diagnostics;
+    private TextView diagnosticInstructions;
+    private TextView diagnosticResult;
 
     @Override
     protected void onCreate(Bundle savedState) {
         super.onCreate(savedState);
         state = FeedCheckService.state(this);
 
-        ScrollView screen = new ScrollView(this);
-        screen.setBackgroundColor(Color.rgb(244, 247, 245));
-        LinearLayout column = new LinearLayout(this);
-        column.setOrientation(LinearLayout.VERTICAL);
-        screen.addView(column);
-        int padding = dp(24);
-        column.setPadding(padding, padding, padding, padding);
-        screen.setOnApplyWindowInsetsListener((view, insets) -> {
-            column.setPadding(padding + insets.getSystemWindowInsetLeft(),
-                    padding + insets.getSystemWindowInsetTop(), padding + insets.getSystemWindowInsetRight(),
-                    padding + insets.getSystemWindowInsetBottom());
+        setContentView(R.layout.home);
+        View column = findViewById(R.id.home_content);
+        int padding = column.getPaddingTop();
+        column.setOnApplyWindowInsetsListener((view, insets) -> {
+            int left = insets.getSystemWindowInsetLeft();
+            int right = insets.getSystemWindowInsetRight();
+            int extra = Math.max(0, dp(getResources().getConfiguration().screenWidthDp - 520) - left - right) / 2;
+            view.setPadding(padding + left + extra, padding + insets.getSystemWindowInsetTop(),
+                    padding + right + extra, padding + insets.getSystemWindowInsetBottom());
             return insets;
         });
-        setContentView(screen);
 
-        text(column, "Feed Check", 30);
-        text(column, "Cover recognised Spotlight and Discover content in Snapchat. "
-                + "While Spotlight is covered, Android media audio is muted.", 16);
-        status = text(column, "", 16);
-
-        Button settings = button(column, "Open Accessibility settings");
-        settings.setOnClickListener(view -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
-        blockingButton = button(column, "Turn on feed blocking");
-        blockingButton.setOnClickListener(view -> changeBlocking());
-        settingsGuardButton = button(column, "Protect Feed Check settings");
+        findViewById(R.id.more_options).setOnClickListener(this::showMenu);
+        status = findViewById(R.id.blocking_status);
+        blockingDetail = findViewById(R.id.blocking_detail);
+        blockingButton = findViewById(R.id.blocking_action);
+        settingsGuardDetail = findViewById(R.id.settings_guard_detail);
+        settingsGuardButton = findViewById(R.id.settings_guard_action);
         settingsGuardButton.setOnClickListener(view -> changeSettingsGuard());
-        temporaryAccess = button(column, "Allow Feed Check settings for one minute");
+        temporaryAccess = findViewById(R.id.temporary_access);
         temporaryAccess.setOnClickListener(view -> showPinPrompt(
                 "Allow Feed Check settings", "Allow", null, edit -> {
                     ProtectedSettings.allowTemporarily();
                     Toast.makeText(this, "Feed Check settings unlocked for one minute", Toast.LENGTH_SHORT).show();
                 }));
-        start = button(column, "Start a check in Snapchat");
-        start.setOnClickListener(view -> startCheck());
-        text(column, "Open the screen you want to check. Keep it open for a few seconds, then return here.", 16);
-        result = text(column, "", 17);
+        changePinButton = findViewById(R.id.change_parent_pin);
+        changePinButton.setOnClickListener(view -> changeParentPin());
+        if (savedState != null && savedState.getBoolean(SHOW_DIAGNOSTICS)) {
+            showDiagnostics();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         new SpotlightAudio(this).restore();
-        if (state.getBoolean(FeedCheckService.ACTIVE, false)) {
+        boolean finishedCheck = state.getBoolean(FeedCheckService.ACTIVE, false);
+        if (finishedCheck) {
             state.edit().putBoolean(FeedCheckService.ACTIVE, false).apply();
         }
         refreshControls();
-        int last = state.getInt(FeedCheckService.LAST, FeedCheckService.NO_WINDOW);
-        if (last == FeedCheckService.NO_WINDOW) {
-            result.setText("No Snapchat window sampled yet.");
-        } else {
-            result.setText("Last Snapchat screen\n" + describe(last) + "\n\nSeen during this check\n"
-                    + describe(state.getInt(FeedCheckService.OBSERVED, 0)));
+        if (finishedCheck && diagnostics == null) {
+            showDiagnostics();
+        } else if (diagnostics != null) {
+            refreshDiagnostics();
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(SHOW_DIAGNOSTICS, diagnostics != null);
+    }
+
+    private void showMenu(View anchor) {
+        PopupMenu menu = new PopupMenu(this, anchor, Gravity.END);
+        menu.getMenu().add(R.string.diagnostics).setOnMenuItemClickListener(item -> {
+            showDiagnostics();
+            return true;
+        });
+        menu.getMenu().add(R.string.open_accessibility_settings).setOnMenuItemClickListener(item -> {
+            openAccessibilitySettings();
+            return true;
+        });
+        menu.show();
+    }
+
+    private void openAccessibilitySettings() {
+        startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+    }
+
+    private void showDiagnostics() {
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(24), dp(16), dp(24), dp(8));
+        scroll.addView(content);
+        diagnosticInstructions = new TextView(this);
+        diagnosticInstructions.setTextColor(getColor(R.color.ink_muted));
+        diagnosticInstructions.setTextSize(15);
+        content.addView(diagnosticInstructions);
+        diagnosticResult = new TextView(this);
+        diagnosticResult.setPadding(0, dp(18), 0, 0);
+        diagnosticResult.setTextColor(getColor(R.color.ink));
+        diagnosticResult.setTextSize(16);
+        content.addView(diagnosticResult);
+
+        diagnostics = new AlertDialog.Builder(this)
+                .setTitle(R.string.diagnostics)
+                .setView(scroll)
+                .setNegativeButton(R.string.close, null)
+                .setPositiveButton(R.string.start_check, null)
+                .create();
+        diagnostics.setOnDismissListener(dialog -> {
+            diagnostics = null;
+            diagnosticInstructions = null;
+            diagnosticResult = null;
+        });
+        diagnostics.show();
+        diagnostics.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> startCheck());
+        refreshDiagnostics();
+    }
+
+    private void refreshDiagnostics() {
+        boolean enabled = serviceEnabled();
+        diagnosticInstructions.setText(enabled ? R.string.diagnostics_instructions : R.string.diagnostics_needs_accessibility);
+        diagnostics.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(enabled);
+        int last = state.getInt(FeedCheckService.LAST, FeedCheckService.NO_WINDOW);
+        diagnosticResult.setText(last == FeedCheckService.NO_WINDOW ? getString(R.string.diagnostics_empty)
+                : getString(R.string.diagnostics_results, describe(last), describe(state.getInt(FeedCheckService.OBSERVED, 0))));
     }
 
     private void refreshControls() {
@@ -100,17 +164,26 @@ public final class MainActivity extends Activity {
         boolean blocking = state.getBoolean(FeedCheckService.BLOCKING, false);
         boolean settingsGuard = state.getBoolean(ProtectedSettings.ENABLED, false);
         if (enabled) {
-            status.setText(blocking ? "Feed blocking is on" : "Feed blocking is off");
+            status.setText(blocking ? R.string.blocking_on : R.string.blocking_off);
+            blockingDetail.setText(blocking ? R.string.blocking_on_detail : R.string.blocking_off_detail);
+            blockingButton.setText(blocking ? R.string.pause_blocking : R.string.turn_on_blocking);
+            blockingButton.setOnClickListener(view -> changeBlocking());
         } else {
-            status.setText("Turn on Feed Check in Accessibility to start");
+            status.setText(R.string.setup_needed);
+            blockingDetail.setText(R.string.setup_detail);
+            blockingButton.setText(R.string.open_accessibility_settings);
+            blockingButton.setOnClickListener(view -> openAccessibilitySettings());
         }
-        start.setEnabled(enabled);
-        blockingButton.setEnabled(enabled);
-        blockingButton.setText(blocking ? "Pause feed blocking" : "Turn on feed blocking");
-        settingsGuardButton.setText(settingsGuard ? "Turn off Settings guard" : "Protect Feed Check settings");
+        if (enabled) {
+            settingsGuardDetail.setText(settingsGuard ? R.string.guard_on_detail : R.string.guard_off_detail);
+        } else {
+            settingsGuardDetail.setText(R.string.guard_needs_accessibility);
+        }
+        settingsGuardButton.setText(settingsGuard ? R.string.disable_guard : R.string.enable_guard);
         settingsGuardButton.setEnabled(enabled || settingsGuard);
         temporaryAccess.setVisibility(settingsGuard ? View.VISIBLE : View.GONE);
         temporaryAccess.setEnabled(enabled);
+        changePinButton.setVisibility(state.contains(PIN) ? View.VISIBLE : View.GONE);
     }
 
     private void changeBlocking() {
@@ -146,30 +219,26 @@ public final class MainActivity extends Activity {
             return;
         }
 
-        LinearLayout inputs = new LinearLayout(this);
-        inputs.setOrientation(LinearLayout.VERTICAL);
-        inputs.setPadding(dp(24), 0, dp(24), 0);
+        LinearLayout inputs = pinInputs();
         EditText pin = pinField(inputs, "6-digit parent PIN");
         EditText repeated = creating ? pinField(inputs, "Repeat parent PIN") : null;
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(creating ? "Create a parent PIN" : title)
-                .setMessage(message)
-                .setView(inputs)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton(action, null)
-                .create();
-        dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        dialog.show();
+        AlertDialog dialog = showPinDialog(inputs, creating ? "Create a parent PIN" : title, action, message);
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             char[] value = readPin(pin);
             char[] confirmation = repeated == null ? new char[0] : readPin(repeated);
             try {
+                if (!Objects.equals(verifier, state.getString(PIN, null))) {
+                    dialog.dismiss();
+                    refreshControls();
+                    Toast.makeText(this, R.string.pin_changed_elsewhere, Toast.LENGTH_LONG).show();
+                    return;
+                }
                 if (!creating && !ParentPin.matches(value, verifier)) {
-                    pin.setError("Incorrect parent PIN");
+                    pin.setError(getString(R.string.incorrect_parent_pin));
                     return;
                 }
                 if (creating && (!ParentPin.valid(value) || !Arrays.equals(value, confirmation))) {
-                    pin.setError("Enter the same six digits twice");
+                    pin.setError(getString(R.string.pin_confirmation_error));
                     return;
                 }
                 SharedPreferences.Editor edit = state.edit();
@@ -181,12 +250,68 @@ public final class MainActivity extends Activity {
                 dialog.dismiss();
                 refreshControls();
             } catch (IllegalStateException error) {
-                pin.setError("PIN verification is unavailable on this device");
+                pin.setError(getString(R.string.pin_verification_unavailable));
             } finally {
                 Arrays.fill(value, '\0');
                 Arrays.fill(confirmation, '\0');
             }
         });
+    }
+
+    private void changeParentPin() {
+        LinearLayout inputs = pinInputs();
+        EditText currentPin = pinField(inputs, getString(R.string.current_parent_pin));
+        EditText newPin = pinField(inputs, getString(R.string.new_parent_pin));
+        EditText repeatedPin = pinField(inputs, getString(R.string.repeat_new_pin));
+        AlertDialog dialog = showPinDialog(inputs, getString(R.string.change_parent_pin), getString(R.string.save_pin), null);
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            char[] current = readPin(currentPin);
+            char[] replacement = readPin(newPin);
+            char[] repeated = readPin(repeatedPin);
+            try {
+                if (!ParentPin.matches(current, state.getString(PIN, null))) {
+                    currentPin.setError(getString(R.string.incorrect_parent_pin));
+                    currentPin.requestFocus();
+                    return;
+                }
+                if (!ParentPin.valid(replacement) || !Arrays.equals(replacement, repeated)) {
+                    newPin.setError(getString(R.string.pin_confirmation_error));
+                    newPin.requestFocus();
+                    return;
+                }
+                state.edit().putString(PIN, ParentPin.create(replacement)).apply();
+                dialog.dismiss();
+                Toast.makeText(this, R.string.pin_changed, Toast.LENGTH_SHORT).show();
+            } catch (IllegalStateException error) {
+                currentPin.setError(getString(R.string.pin_verification_unavailable));
+            } finally {
+                Arrays.fill(current, '\0');
+                Arrays.fill(replacement, '\0');
+                Arrays.fill(repeated, '\0');
+            }
+        });
+    }
+
+    private LinearLayout pinInputs() {
+        LinearLayout inputs = new LinearLayout(this);
+        inputs.setOrientation(LinearLayout.VERTICAL);
+        inputs.setPadding(dp(24), 0, dp(24), 0);
+        return inputs;
+    }
+
+    private AlertDialog showPinDialog(LinearLayout inputs, String title, String action, String message) {
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(inputs);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setView(scroll)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(action, null)
+                .create();
+        dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        dialog.show();
+        return dialog;
     }
 
     private EditText pinField(LinearLayout parent, String hint) {
@@ -196,6 +321,7 @@ public final class MainActivity extends Activity {
         field.setFilters(new InputFilter[] {new InputFilter.LengthFilter(ParentPin.LENGTH)});
         field.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
         field.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        field.setSaveEnabled(false);
         parent.addView(field);
         return field;
     }
@@ -242,24 +368,6 @@ public final class MainActivity extends Activity {
             }
         }
         return description.length() == 0 ? "No known screen identifiers" : description.toString();
-    }
-
-    private Button button(LinearLayout column, String label) {
-        Button button = new Button(this);
-        button.setText(label);
-        button.setAllCaps(false);
-        column.addView(button, new LinearLayout.LayoutParams(-1, -2));
-        return button;
-    }
-
-    private TextView text(LinearLayout column, String value, int size) {
-        TextView label = new TextView(this);
-        label.setText(value);
-        label.setTextColor(Color.rgb(25, 43, 34));
-        label.setTextSize(size);
-        label.setPadding(0, dp(4), 0, dp(12));
-        column.addView(label, new LinearLayout.LayoutParams(-1, -2));
-        return label;
     }
 
     private int dp(int value) {

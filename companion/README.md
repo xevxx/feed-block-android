@@ -20,7 +20,9 @@ Feed Check temporarily mutes Android's media stream while a recognised Spotlight
 
 This optional guard starts off. In Feed Check, tap **Protect Feed Check settings** and enter the parent PIN. While the guard is on, recognised Feed Check **App Info** and **Accessibility service detail** pages show **Parent access required**. The Android Settings home, the Accessibility list, other service details, and other apps' App Info are available normally.
 
-Use **Allow Feed Check settings for one minute** with the PIN for maintenance. Return to Android Settings during that minute. **Turn off Settings guard** also requires the PIN. This setting is independent of feed blocking.
+Use **Allow settings for one minute** with the PIN for maintenance. Return to Android Settings during that minute. **Turn off Settings guard** also requires the PIN. This setting is independent of feed blocking.
+
+To replace an existing PIN, open **Parent controls → Change parent PIN**. Enter the current PIN and the new six-digit PIN twice, then select **Save PIN**. Use the new PIN the next time Feed Check asks for it.
 
 Recognition uses exact screen layout identifiers and the Feed Check label. Unrecognised Settings layouts remain accessible. The guard requires the Accessibility service to be running, and Android can still provide other ways to disable it or uninstall the app.
 
@@ -28,7 +30,7 @@ Both pages were verified on a Huawei ELS-NX9 running Android 10 and on a stock A
 
 ## Check screen identifiers
 
-Use **Start a check in Snapchat** and open the screen you want to check. Wait a few seconds, then return through Android's app switcher and read **Last Snapchat screen**. If you need to inspect a feed with the overlay off, pause it with the parent PIN first. The service checks four exact IDs and stores only the matches during a diagnostic run. It requests Snapchat events, has no network permission, and accesses neither message text nor screenshots.
+Open **More options → Diagnostics**, tap **Start a check in Snapchat**, and open the screen you want to check. Wait a few seconds, then return through Android's app switcher and read **Last Snapchat screen** in the Diagnostics dialog. If you need to inspect a feed with the overlay off, pause it with the parent PIN first. The service checks four exact IDs and stores only the matches during a diagnostic run. It requests Snapchat events, has no network permission, and accesses neither message text nor screenshots.
 
 ## Build
 

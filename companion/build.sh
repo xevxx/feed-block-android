@@ -29,11 +29,13 @@ if [[ ! -d "$key_dir" ]]; then
     mv -T -- "$scratch/key" "$key_dir"
 fi
 
-mkdir -- "$scratch/classes" "$scratch/dex"
+mkdir -- "$scratch/classes" "$scratch/dex" "$scratch/generated"
 "$tools_dir/aapt2" compile --dir "$source_dir/res" -o "$scratch/resources.zip"
 "$tools_dir/aapt2" link -I "$platform" --manifest "$source_dir/AndroidManifest.xml" \
-    --min-sdk-version 26 --target-sdk-version 36 -o "$scratch/unsigned.apk" "$scratch/resources.zip"
-javac --release 11 -cp "$platform" -d "$scratch/classes" "$source_dir"/src/local/feedcheck/android/*.java
+    --min-sdk-version 26 --target-sdk-version 36 --java "$scratch/generated" \
+    -o "$scratch/unsigned.apk" "$scratch/resources.zip"
+javac --release 11 -cp "$platform" -d "$scratch/classes" \
+    "$scratch/generated/local/feedcheck/android/R.java" "$source_dir"/src/local/feedcheck/android/*.java
 jar --create --file "$scratch/classes.jar" -C "$scratch/classes" .
 "$tools_dir/d8" --min-api 26 --lib "$platform" --output "$scratch/dex" "$scratch/classes.jar"
 python3 - "$scratch" <<'PY'

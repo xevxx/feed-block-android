@@ -1,0 +1,18 @@
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#30154633">
+    <item>
+        <selector>
+            <item android:state_enabled="false">
+                <shape>
+                    <corners android:radius="13dp" />
+                    <solid android:color="@color/brand_disabled" />
+                </shape>
+            </item>
+            <item>
+                <shape>
+                    <corners android:radius="13dp" />
+                    <solid android:color="@color/brand_mint" />
+                </shape>
+            </item>
+        </selector>
+    </item>
+</ripple>

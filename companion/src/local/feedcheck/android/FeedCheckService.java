@@ -6,18 +6,18 @@ import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.view.Gravity;
+import android.view.ContextThemeWrapper;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -44,7 +44,7 @@ public final class FeedCheckService extends AccessibilityService {
     };
     private Screen pending;
     private Screen covered;
-    private LinearLayout overlay;
+    private View overlay;
     private int receivedEvents;
     private int lastSample = NO_WINDOW;
     private int shownOverlays;
@@ -273,32 +273,23 @@ public final class FeedCheckService extends AccessibilityService {
     }
 
     private void showOverlay(Screen target) {
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setGravity(Gravity.CENTER);
-        panel.setBackgroundColor(Color.rgb(244, 247, 245));
-        panel.setClickable(true);
-        int padding = Math.round(24 * getResources().getDisplayMetrics().density);
-        panel.setPadding(padding, padding, padding, padding);
-
-        TextView heading = new TextView(this);
-        heading.setText(target.settingsPage == null ? "Feed blocked" : "Parent access required");
-        heading.setTextSize(28);
-        heading.setTextColor(Color.rgb(25, 43, 34));
-        heading.setGravity(Gravity.CENTER);
-        panel.addView(heading);
+        Context themed = new ContextThemeWrapper(this, R.style.FeedCheckTheme);
+        View panel = LayoutInflater.from(themed).inflate(R.layout.block_screen, null);
+        TextView heading = panel.findViewById(R.id.block_screen_title);
+        heading.setText(target.settingsPage == null ? R.string.feed_blocked : R.string.parent_access_required);
         if (target.settingsPage != null) {
-            TextView detail = new TextView(this);
+            TextView detail = panel.findViewById(R.id.block_screen_detail);
             detail.setText(target.settingsPage.label);
-            detail.setTextSize(16);
-            detail.setGravity(Gravity.CENTER);
-            panel.addView(detail);
+            detail.setVisibility(View.VISIBLE);
         }
-        addExitButton(panel, "Go back", () -> performGlobalAction(GLOBAL_ACTION_BACK));
+        setExitAction(panel.findViewById(R.id.block_screen_back), () -> performGlobalAction(GLOBAL_ACTION_BACK));
+        Button exit = panel.findViewById(R.id.block_screen_exit);
         if (target.settingsPage == null) {
-            addExitButton(panel, "Leave Snapchat", () -> performGlobalAction(GLOBAL_ACTION_HOME));
+            exit.setText(R.string.leave_snapchat);
+            setExitAction(exit, () -> performGlobalAction(GLOBAL_ACTION_HOME));
         } else {
-            addExitButton(panel, "Open Feed Check", () -> startActivity(new Intent(this, MainActivity.class)
+            exit.setText(R.string.open_feed_check);
+            setExitAction(exit, () -> startActivity(new Intent(this, MainActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
         }
 
@@ -321,10 +312,7 @@ public final class FeedCheckService extends AccessibilityService {
         }
     }
 
-    private void addExitButton(LinearLayout panel, String label, Runnable action) {
-        Button button = new Button(this);
-        button.setText(label);
-        button.setAllCaps(false);
+    private void setExitAction(Button button, Runnable action) {
         button.setOnClickListener(view -> {
             if (confirmCurrentPage(covered) != null) {
                 action.run();
@@ -332,7 +320,6 @@ public final class FeedCheckService extends AccessibilityService {
                 hideOverlay();
             }
         });
-        panel.addView(button);
     }
 
     private void hideOverlay() {

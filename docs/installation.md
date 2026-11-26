@@ -24,4 +24,4 @@ The APK in `originals/` is the official signed backup for research and offline t
 adb -s TEST_DEVICE install ../snapchat-14.33.1.0-local-signature-test.apk
 ```
 
-The signed test build includes the original feeds. It installed and opened the **Log In** form. Snapchat then declined an online sign-in from the test emulator with a temporary-access message. The cause of that refusal remains undetermined. [Snapchat login errors](https://help.snapchat.com/hc/en-gb/articles/7012325477268-I-get-an-error-message-logging-in-to-Snapchat)
+The signed test build includes the original feeds. It installed and opened the **Log In** form. Snapchat then declined an online sign-in from the test emulator with a temporary-access message. The user later reported that the account no longer existed. The cause of the refusal remains undetermined. [Snapchat login errors](https://help.snapchat.com/hc/en-gb/articles/7012325477268-I-get-an-error-message-logging-in-to-Snapchat)

@@ -54,7 +54,7 @@ public final class MainActivity extends Activity {
 
         text(column, "Feed Check", 30);
         text(column, "Cover recognised Spotlight and Discover content in Snapchat. "
-                + "The check and its results stay on this phone.", 16);
+                + "While Spotlight is covered, Android media audio is muted.", 16);
         status = text(column, "", 16);
 
         Button settings = button(column, "Open Accessibility settings");
@@ -70,6 +70,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        new SpotlightAudio(this).restore();
         if (state.getBoolean(FeedCheckService.ACTIVE, false)) {
             state.edit().putBoolean(FeedCheckService.ACTIVE, false).apply();
         }

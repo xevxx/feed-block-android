@@ -12,6 +12,10 @@ If Android restricts access for the sideloaded app, the phone owner can review t
 
 The service acts only when a known feed marker is visible in the focused Snapchat window and neither chat marker is visible. Two samples are required before it displays the overlay. A direct friend Story without those markers is left alone. Feed Check does not determine friendship or prevent content downloads. The overlay can appear after a feed becomes visible, and Snapchat layout changes can affect coverage. Android Settings can disable the service independently of the parent PIN.
 
+## Spotlight sound
+
+Feed Check temporarily mutes Android's media stream while a recognised Spotlight screen is covered. Other apps on that media stream are also quiet during this interval. The app restores the prior mute state without setting a new volume level. Reopening Feed Check recovers a pending restore if Android stopped the service abruptly.
+
 ## Check screen identifiers
 
 Use **Start a check in Snapchat** and open the screen you want to check. Wait a few seconds, then return through Android's app switcher and read **Last Snapchat screen**. If you need to inspect a feed with the overlay off, pause it with the parent PIN first. The service checks four exact IDs and stores only the matches during a diagnostic run. It requests Snapchat events, has no network permission, and accesses neither message text nor screenshots.
@@ -27,3 +31,5 @@ The signed diagnostic APK installed and reached its home screen on the connected
 After opening Stories again, the user reported **Discover card** under **Last Snapchat screen** and both feed identifiers under **Seen during this check**. The latter accumulates matches across screens during a run. The last sample identifies a Discover card on the tested Stories screen. Stories without that card, direct Story playback, and other entry routes still need checks.
 
 Version 0.2 installed as an update on the same phone and retained the existing Accessibility grant. Local checks covered the feed marker rules, chat exclusions, and PIN verification. That build did not display the overlay on the first phone test. Version 0.3 uses the active-window lookup from the diagnostic and retained the enabled blocking setting. The service reported a visible overlay over a Discover card, with both chat markers absent. The parent must set a PIN and explicitly turn on blocking on a fresh install or an upgrade from the diagnostic.
+
+Version 0.4 installed on the same phone. With the update, the user reported silence in Spotlight. After leaving it, Android reported media unmuted at the same level as before the test. Isolated checks covered an existing mute, a failed mute request, and recovery across a service restart.

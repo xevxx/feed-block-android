@@ -1,12 +1,14 @@
 package local.feedcheck.android;
 
 import android.accessibilityservice.AccessibilityService;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -39,6 +41,7 @@ public final class FeedCheckService extends AccessibilityService {
     private int lastSample = NO_WINDOW;
     private int shownOverlays;
     private boolean overlayRejected;
+    private SpotlightAudio spotlightAudio;
 
     enum Marker {
         SPOTLIGHT("Spotlight", "spotlight_container"),
@@ -75,6 +78,13 @@ public final class FeedCheckService extends AccessibilityService {
 
     static SharedPreferences state(Context context) {
         return context.getSharedPreferences("feed_check", Context.MODE_PRIVATE);
+    }
+
+    @Override
+    protected void onServiceConnected() {
+        super.onServiceConnected();
+        spotlightAudio = new SpotlightAudio(this);
+        spotlightAudio.restore();
     }
 
     @Override
@@ -167,31 +177,38 @@ public final class FeedCheckService extends AccessibilityService {
         }
     }
 
-    private boolean isCurrentFeed(int window) {
+    private Screen currentFeed(int window) {
         if (window == NO_WINDOW || !state(this).getBoolean(BLOCKING, false)) {
-            return false;
+            return null;
+        }
+        if (!getSystemService(PowerManager.class).isInteractive()
+                || getSystemService(KeyguardManager.class).isKeyguardLocked()) {
+            return null;
         }
         Screen current = currentSnapchatScreen();
-        return current != null && current.window == window && Marker.identifiesFeed(current.markers);
+        return current != null && current.window == window && Marker.identifiesFeed(current.markers) ? current : null;
     }
 
     private void confirmFeed() {
         int expected = pendingWindow;
         pendingWindow = NO_WINDOW;
-        if (isCurrentFeed(expected)) {
-            showOverlay(expected);
+        Screen feed = currentFeed(expected);
+        if (feed != null) {
+            showOverlay(feed);
         }
     }
 
     private void checkOverlayWindow() {
-        if (isCurrentFeed(coveredWindow)) {
+        Screen feed = currentFeed(coveredWindow);
+        if (feed != null) {
+            spotlightAudio.update((feed.markers & Marker.SPOTLIGHT.bit) != 0);
             handler.postDelayed(checkOverlay, OVERLAY_CHECK_DELAY);
         } else {
             hideOverlay();
         }
     }
 
-    private void showOverlay(int window) {
+    private void showOverlay(Screen feed) {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setGravity(Gravity.CENTER);
@@ -217,9 +234,10 @@ public final class FeedCheckService extends AccessibilityService {
         try {
             getSystemService(WindowManager.class).addView(panel, layout);
             overlay = panel;
-            coveredWindow = window;
+            coveredWindow = feed.window;
             shownOverlays++;
             overlayRejected = false;
+            spotlightAudio.update((feed.markers & Marker.SPOTLIGHT.bit) != 0);
             handler.postDelayed(checkOverlay, OVERLAY_CHECK_DELAY);
         } catch (WindowManager.BadTokenException ignored) {
             // Android may revoke the service between confirmation and adding the window.
@@ -232,7 +250,7 @@ public final class FeedCheckService extends AccessibilityService {
         button.setText(label);
         button.setAllCaps(false);
         button.setOnClickListener(view -> {
-            if (isCurrentFeed(coveredWindow)) {
+            if (currentFeed(coveredWindow) != null) {
                 performGlobalAction(action);
             } else {
                 hideOverlay();
@@ -245,6 +263,7 @@ public final class FeedCheckService extends AccessibilityService {
         handler.removeCallbacks(checkOverlay);
         coveredWindow = NO_WINDOW;
         if (overlay != null) {
+            spotlightAudio.restore();
             getSystemService(WindowManager.class).removeViewImmediate(overlay);
             overlay = null;
         }
@@ -273,6 +292,10 @@ public final class FeedCheckService extends AccessibilityService {
         writer.println("Feed Check overlays shown: " + shownOverlays);
         writer.println("Feed Check overlay visible: " + (overlay != null));
         writer.println("Feed Check overlay rejected: " + overlayRejected);
+        if (spotlightAudio != null) {
+            writer.println("Feed Check media muted: " + spotlightAudio.isMuted());
+            writer.println("Feed Check owns media mute: " + spotlightAudio.ownsMute());
+        }
     }
 
     @Override

@@ -15,3 +15,5 @@
 - Recorded that the tested Stories screen exposed a Discover card as its last sample.
 - Added an optional feed overlay with user-controlled navigation and a parent PIN to pause blocking.
 - Switched overlay detection to the active Snapchat window and observed a visible overlay over a Discover card on the connected phone.
+- Temporarily muted Android media while the Spotlight overlay is visible. The user reported silence in Spotlight and the phone reported its original audio level after leaving.
+- Recorded the later account-status clarification for the earlier emulator login test.

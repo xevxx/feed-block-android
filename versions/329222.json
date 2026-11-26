@@ -20,6 +20,6 @@
     "Parent PIN, persistent modes, and a Settings entry are unimplemented.",
     "Feed, public profile, gesture, notification, deep-link, and cached-content restrictions are unverified.",
     "Mutual-friend enforcement at Story retrieval and playback is unverified.",
-    "Account compatibility and private communication regression tests require an authorized runtime test environment."
+    "The locally signed baseline was refused at sign-in on the test emulator. Signed-in communication remains unverified."
   ]
 }

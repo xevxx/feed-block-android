@@ -9,3 +9,4 @@
 - Added a version profile, a release gate, and documentation for using the official app with Family Center controls.
 - Added `sign-baseline` to verify, align, and re-sign the original APK for a clean-install test. It checks every non-signature entry against the source APK.
 - Installed the re-signed copy offline on a fresh emulator and opened the empty login form.
+- Recorded the failed online sign-in with the locally signed test APK. Snapchat reported temporarily disabled access due to unusual activity.

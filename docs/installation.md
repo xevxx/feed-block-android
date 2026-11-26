@@ -24,4 +24,4 @@ The APK in `originals/` is the official signed backup for research and offline t
 adb -s TEST_DEVICE install ../snapchat-14.33.1.0-local-signature-test.apk
 ```
 
-The signed test build includes the original feeds. It installed on a clean Android 36.1 emulator and opened the **Log In** form in airplane mode. Server authentication remains untested. Snap warns that using an unauthorized client or emulator can affect logins and lead to account locks. [Snapchat support on third-party tweaks](https://help.snapchat.com/hc/en-gb/articles/7012343686932-Can-I-use-third-party-apps-or-plug-ins-with-Snapchat)
+The signed test build includes the original feeds. It installed and opened the **Log In** form. Snapchat then declined an online sign-in from the test emulator with a temporary-access message. The cause of that refusal remains undetermined. [Snapchat login errors](https://help.snapchat.com/hc/en-gb/articles/7012325477268-I-get-an-error-message-logging-in-to-Snapchat)

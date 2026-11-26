@@ -1,34 +1,27 @@
-# Snapchat parental content controls
+# Feed Check
 
-This project audits Snapchat 14.33.1.0 on Android and contains an isolated experiment for opening shared Spotlight content from chat. The requested three-mode parental control is still incomplete. The release check blocks the parental-control build.
+Feed Check is an Android companion for Snapchat. It covers recognised Spotlight and Discover feeds so you can keep using the official Snapchat app for messaging. While Spotlight is covered, Feed Check temporarily mutes the phone’s media audio.
 
-The APK supplied in the parent folder is byte-for-byte identical to the [APKMirror standalone download](https://www.apkmirror.com/apk/snap-inc/snapchat/snapchat-14-33-1-0-release/snapchat-14-33-1-0-2-android-apk-download/). Its read-only backup is `originals/snapchat-329222-a96c3e3aa446.apk`.
+## Download and set up
 
-## Run the audit from WSL
+1. Download the signed Feed Check APK from [GitHub Releases](https://github.com/xevxx/snapchatfeedcontrol/releases) and install it on Android 8.0 or newer. Keep the official Snapchat app installed alongside it.
+2. In Feed Check, tap **Open Accessibility settings**. Open the installed or downloaded services list, choose **Feed Check**, and enable it.
+3. Return to Feed Check, tap **Turn on feed blocking**, and set a six-digit parent PIN.
+4. Open Snapchat and check Spotlight, a Stories page with Discover cards, and a private chat on your phone. Covered feeds show **Feed blocked** with **Go back** and **Leave Snapchat**.
 
-Run these commands from this project directory with Bash. For a different input, set `apk` to its exact pathname.
+Some Android versions require a separate approval before a sideloaded app can use Accessibility. [Android restricted settings](https://support.google.com/android/answer/12623953)
 
-```bash
-apk='../com.snapchat.android_14.33.1.0-329222_minAPI23(arm64-v8a,armeabi-v7a)(nodpi)_apkmirror.com.apk'
-bash scripts/dependencies.sh --check
-python3 scripts/apk-lab.py inspect "$apk"
-python3 scripts/apk-lab.py experiment "$apk"
-python3 scripts/apk-lab.py release-check "$apk"
-```
+## Parent controls
 
-`inspect` checks the APK hash, Android signing certificate, version, SDK levels, ABIs and DEX count. `prepare` takes the same APK argument, preserves a verified backup and disassembles the 11 DEX files under `work/decoded-329222`. This directory already exists in the current workspace. `experiment` uses a fresh temporary decode, assembles two scoped edits, verifies both method bodies and disassembles the result with Baksmali. It removes its intermediate DEX after verification. `release-check` exits with status 3 for this known, incomplete version. An unknown input exits with status 2 before decoding.
+- **Pause feed blocking** requires the parent PIN.
+- **Protect Feed Check settings** adds a PIN guard to Feed Check’s own Accessibility details and App Info where supported. Android Settings and the Accessibility services list remain usable.
+- **Allow settings for one minute** temporarily unlocks the guarded pages for maintenance.
+- **Change parent PIN** appears after you set a PIN. Enter the current PIN and the new PIN twice.
 
-To test the effect of re-signing on its own, use the original, verified input and a new output path.
+## Compatibility
 
-```bash
-python3 scripts/apk-lab.py sign-baseline "$apk" --output ../snapchat-14.33.1.0-local-signature-test.apk
-```
+Feed Check recognises specific Snapchat layouts. A feed may appear briefly before it is covered, and Snapchat or Android updates can change which screens are recognised. The Settings guard was verified on a Huawei phone running Android 10 and in a stock Android emulator. Samsung Galaxy S21 Settings coverage still needs testing on the device.
 
-The command verifies the signed APK against the original entry by entry. It keeps the same app payload and package name, so all original content remains available. The local signing key is kept in the ignored `work/local-signing` directory. Keep that directory private. See the installation guide for the package signature restriction.
+For a screen that goes uncovered, open **⋮ → Diagnostics** in Feed Check. The diagnostic shows the screen identifiers it recognised during your check.
 
-On Ubuntu use `bash scripts/dependencies.sh --install-ubuntu` for system packages and `bash scripts/dependencies.sh --install-jadx` for the checksum-pinned optional decompiler. The tools prioritize an SDK at `ANDROID_SDK_ROOT`, `ANDROID_HOME` or `~/Android/Sdk`. The experiment uses Ubuntu's APKTool Smali libraries by default. `SMALI_CLASSPATH` can point to an equivalent set of compatible JARs.
-
-- [Technical and compatibility report](docs/compatibility-329222.md)
-- [Installation and official app controls](docs/installation.md)
-- [Feed Check Accessibility companion](companion/README.md)
-- [Changelog](CHANGELOG.md)
+[Build and troubleshooting notes](companion/README.md) · [Earlier Snapchat APK audit](docs/snapchat-apk-audit.md) · [Changelog](CHANGELOG.md)

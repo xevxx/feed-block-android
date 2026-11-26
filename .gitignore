@@ -1,0 +1,6 @@
+/originals/
+/work/
+*.apk
+*.dex
+*.jks
+__pycache__/

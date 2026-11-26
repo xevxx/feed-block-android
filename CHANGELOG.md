@@ -1,0 +1,9 @@
+# Changelog
+
+## 2026-11-26
+
+- Verified and archived the supplied Snapchat 14.33.1.0 standalone APK.
+- Disassembled all 11 DEX files and mapped navigation, settings, friend relationship, notification and content paths.
+- Added an isolated Smali experiment for the two implementations of the chat Spotlight playback interface and verified the emitted DEX with Baksmali.
+- Installed and launched the original APK offline on a disposable Android 36.1 emulator.
+- Added a version profile, a release gate, and documentation for using the official app with Family Center controls.

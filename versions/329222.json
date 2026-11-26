@@ -1,0 +1,25 @@
+{
+  "package": "com.snapchat.android",
+  "version_name": "14.33.1.0",
+  "version_code": 329222,
+  "min_sdk": 23,
+  "target_sdk": 36,
+  "abis": ["arm64-v8a", "armeabi-v7a"],
+  "dex_count": 11,
+  "sha256": "a96c3e3aa446df94bde33b78cd6c04dbdb83a2c480e268976d39a4cafa8a7f02",
+  "signer_sha256": "2f1caafca1ed30d0b4e38863eefabea0e815711fa4cf79b822519a8259d95a58",
+  "playback_experiment": {
+    "interface": "Lcom/snap/modules/chat_stories_common/ISpotlightStoryLauncher;",
+    "method": "playStory(Ljava/lang/String;Lcom/snap/valdi/utils/Ref;Lcom/snap/modules/deck/ComposerDeckContainerFactoryInterface;)V",
+    "implementations": {
+      "lookup launcher": ["Lcom/snap/valdi/utils/Ref;", "Lio/reactivex/rxjava3/core/Single;->subscribe("],
+      "callback adapter": ["Lkotlin/jvm/functions/Function3;->invoke("]
+    }
+  },
+  "release_blockers": [
+    "Parent PIN, persistent modes, and a Settings entry are unimplemented.",
+    "Feed, public profile, gesture, notification, deep-link, and cached-content restrictions are unverified.",
+    "Mutual-friend enforcement at Story retrieval and playback is unverified.",
+    "Account compatibility and private communication regression tests require an authorized runtime test environment."
+  ]
+}

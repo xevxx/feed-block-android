@@ -2,11 +2,14 @@
 """Verify an official input and exercise a Spotlight patch on isolated classes."""
 
 import argparse
+from copy import copy
+import errno
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -17,18 +20,23 @@ from zipfile import BadZipFile, ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 SDK = Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ.get("ANDROID_HOME")
            or Path.home() / "Android/Sdk")
+LAB_ALIAS = "snapchat-local-test"
 
 
 class LabError(Exception):
     pass
 
 
-def sha256(file):
+def stream_sha256(stream):
     digest = hashlib.sha256()
-    with file.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
+    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+        digest.update(chunk)
     return digest.hexdigest()
+
+
+def sha256(file):
+    with file.open("rb") as stream:
+        return stream_sha256(stream)
 
 
 def tool(name):
@@ -120,6 +128,93 @@ def preserve(apk, metadata):
     return backup
 
 
+def signature_entry(name):
+    upper = name.upper()
+    return (name == "stamp-cert-sha256" or upper == "META-INF/MANIFEST.MF"
+            or re.fullmatch(r"META-INF/([^/]+\.(SF|RSA|DSA|EC)|SIG-[^/]+)", upper) is not None)
+
+
+def lab_signing_key(workspace):
+    location = workspace / "local-signing"
+    if not location.exists():
+        with tempfile.TemporaryDirectory(prefix="key-", dir=workspace) as temporary:
+            staged = Path(temporary) / "local-signing"
+            staged.mkdir(mode=0o700)
+            password = staged / "password"
+            password.touch(mode=0o600, exist_ok=False)
+            password.write_text(secrets.token_urlsafe(32) + "\n")
+            key = staged / "lab.p12"
+            capture(tool("keytool"), "-genkeypair", "-noprompt", "-storetype", "PKCS12",
+                    "-keystore", key, "-storepass:file", password, "-alias", LAB_ALIAS,
+                    "-dname", "CN=Local Snapchat Lab", "-keyalg", "RSA", "-keysize", "3072",
+                    "-validity", "3650")
+            key.chmod(0o600)
+            try:
+                staged.rename(location)
+            except OSError as exc:
+                if exc.errno not in (errno.EEXIST, errno.ENOTEMPTY):
+                    raise
+    key = location / "lab.p12"
+    password = location / "password"
+    if not key.is_file() or not password.is_file():
+        raise LabError(f"Incomplete signing key directory: {location}")
+    return key, password
+
+
+def verify_identical_payloads(original, signed):
+    with ZipFile(original) as source, ZipFile(signed) as destination:
+        original_entries = [info for info in source.infolist() if not signature_entry(info.filename)]
+        signed_names = [info.filename for info in destination.infolist() if not signature_entry(info.filename)]
+        if sorted(info.filename for info in original_entries) != sorted(signed_names):
+            raise LabError("The re-signed copy has a different payload entry list")
+        for info in original_entries:
+            replacement = destination.getinfo(info.filename)
+            if (info.file_size, info.compress_type) != (replacement.file_size, replacement.compress_type):
+                raise LabError(f"APK entry metadata changed: {info.filename}")
+            with source.open(info) as before, destination.open(replacement) as after:
+                if stream_sha256(before) != stream_sha256(after):
+                    raise LabError(f"APK entry content changed: {info.filename}")
+        return len(original_entries)
+
+
+def sign_baseline(original, metadata, workspace, output):
+    if output.suffix.lower() != ".apk" or output.exists():
+        raise LabError(f"Choose a new .apk output path: {output}")
+    key, password = lab_signing_key(workspace)
+    with tempfile.TemporaryDirectory(prefix="sign-", dir=output.parent) as temporary:
+        directory = Path(temporary)
+        unsigned = directory / "unsigned.apk"
+        aligned = directory / "aligned.apk"
+        signed = directory / "signed.apk"
+        with ZipFile(original) as source, ZipFile(unsigned, "w") as destination:
+            for info in source.infolist():
+                if not signature_entry(info.filename):
+                    with source.open(info) as before, destination.open(copy(info), "w") as after:
+                        shutil.copyfileobj(before, after, 1024 * 1024)
+
+        zipalign = tool("zipalign")
+        apksigner = tool("apksigner")
+        capture(zipalign, "-P", "16", "4", unsigned, aligned)
+        capture(apksigner, "sign", "--ks", key, "--ks-key-alias", LAB_ALIAS,
+                "--ks-pass", f"file:{password}", "--v4-signing-enabled", "false",
+                "--out", signed, aligned)
+        capture(zipalign, "-c", "-P", "16", "4", signed)
+        verification = capture(apksigner, "verify", "--verbose", "--print-certs", signed)
+        for scheme in (1, 2, 3):
+            if not re.search(rf"^Verified using v{scheme} scheme .*: true$", verification, re.MULTILINE):
+                raise LabError(f"Lab APK failed v{scheme} signature verification")
+        fingerprint = extract(r"^Signer #1 certificate SHA-256 digest: ([0-9a-f]+)$", verification)
+        if fingerprint == metadata["signer_sha256"]:
+            raise LabError("The lab APK unexpectedly has the original APK signer")
+        count = verify_identical_payloads(original, signed)
+        digest = sha256(signed)
+        os.link(signed, output)
+    print(f"Verified {count} unchanged payload entries, 16 KiB native library alignment and v1/v2/v3 signatures.")
+    print(f"Locally signed test APK: {output}")
+    print(f"APK SHA-256: {digest}")
+    print(f"Local signer SHA-256: {fingerprint}")
+
+
 def decode(backup, metadata, folder):
     subprocess.run([tool("apktool"), "d", "-r", "-p", folder / "framework", "-o", folder / "decoded",
                     backup], check=True)
@@ -180,9 +275,12 @@ def exercise_patch(decoded, version, folder):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("inspect", "prepare", "experiment", "release-check"))
+    parser.add_argument("command", choices=("inspect", "prepare", "experiment", "sign-baseline", "release-check"))
     parser.add_argument("apk", type=Path)
+    parser.add_argument("--output", type=Path, help="new APK path for sign-baseline")
     args = parser.parse_args()
+    if (args.command == "sign-baseline") != (args.output is not None):
+        parser.error("--output is required for sign-baseline and only allowed with that command")
     try:
         apk = args.apk.resolve(strict=True)
         version, metadata = verify_input(apk)
@@ -197,6 +295,9 @@ def main():
         backup = preserve(apk, metadata)
         workspace = ROOT / "work"
         workspace.mkdir(exist_ok=True)
+        if args.command == "sign-baseline":
+            sign_baseline(backup, metadata, workspace, args.output.resolve())
+            return 0
         target = workspace / f"decoded-{version['version_code']}"
         if args.command == "prepare" and target.exists():
             raise LabError(f"Output already exists: {target}")

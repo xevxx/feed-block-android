@@ -29,7 +29,7 @@ case "${1:---check}" in
     --check)
         sdk=${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}
         status=0
-        for name in python3 java apktool rg git; do
+        for name in python3 java keytool apktool rg git; do
             if ! command -v "$name"; then
                 printf 'Missing %s\n' "$name" >&2
                 status=1

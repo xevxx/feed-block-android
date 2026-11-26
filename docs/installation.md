@@ -15,3 +15,13 @@ Snapchat for Web supports chat, voice and video calls, and taking Snaps from a d
 ## Repository APK
 
 The APK in `originals/` is the official signed backup for research and offline test installation. It has ordinary Snapchat functionality, including feeds. The repository currently has no installable build with parental content controls. See the [compatibility report](compatibility-329222.md) for release requirements and risks.
+
+## Locally signed test APK
+
+`snapchat-14.33.1.0-local-signature-test.apk` in the parent folder has the original app payload and a local certificate. Use a disposable Android test environment where `com.snapchat.android` is absent. Android rejects replacement of an existing Snapchat installation signed by Snap. [Android app update rules](https://developer.android.com/google/play/app-updates)
+
+```bash
+adb -s TEST_DEVICE install ../snapchat-14.33.1.0-local-signature-test.apk
+```
+
+The signed test build includes the original feeds. It installed on a clean Android 36.1 emulator and opened the **Log In** form in airplane mode. Server authentication remains untested. Snap warns that using an unauthorized client or emulator can affect logins and lead to account locks. [Snapchat support on third-party tweaks](https://help.snapchat.com/hc/en-gb/articles/7012343686932-Can-I-use-third-party-apps-or-plug-ins-with-Snapchat)

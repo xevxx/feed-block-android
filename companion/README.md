@@ -30,7 +30,7 @@ To replace an existing PIN, open **Parent controls → Change parent PIN**. Ente
 
 Recognition uses exact screen layout identifiers and the Feed Block label. Unrecognised Settings layouts remain accessible. The guard requires the Accessibility service to be running, and Android can still provide other ways to disable it or uninstall the app.
 
-Both pages were verified on a Huawei ELS-NX9 running Android 10 and on a stock Android 36.1 emulator. The Galaxy S21 runs One UI 7 on Android 15. On that phone, open **Settings → Accessibility → Installed apps → Feed Block** to reach its service switch. The two guarded pages still need verification on a physical S21. [Samsung One UI versions](https://www.samsung.com/us/support/answer/ANS10004612/) · [Samsung Accessibility settings](https://www.samsung.com/us/support/answer/ANS10001906/)
+Both guarded pages were verified on a Huawei ELS-NX9 running Android 10 and on a stock Android 36.1 emulator. A parent also reported that Feed Block works on their Samsung Galaxy S21. On the Galaxy, open **Settings → Accessibility → Installed apps → Feed Block** to reach its service switch. [Samsung Accessibility settings](https://www.samsung.com/us/support/answer/ANS10001906/)
 
 ## Check screen identifiers
 

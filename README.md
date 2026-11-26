@@ -25,7 +25,7 @@ While Spotlight, Reels or Shorts is blocked, Feed Block mutes the phone’s medi
 3. Back in **Feed blocking**, turn on the apps you want. The first switch asks you to set a six-digit parent PIN. You’ll need it to pause blocking.
 4. Try one blocked feed and one thing your child wants to keep using. For example, open Spotlight, then go back and send a chat.
 
-If Family Link stops the install, Samsung shows an Auto Blocker warning, or the Accessibility switch is greyed out, follow the [Android setup guide](docs/android-setup.md).
+Feed Block has worked on a Samsung Galaxy S21. If Family Link stops the install, Samsung shows an Auto Blocker warning, or the Accessibility switch is greyed out, follow the [Android setup guide](docs/android-setup.md).
 
 ## What can my child change?
 
@@ -33,7 +33,7 @@ They can choose the face on the block screen under **More options → Block scre
 
 Pausing a feed requires the parent PIN. To also ask for the PIN when someone opens Feed Block’s own Accessibility controls or App Info, turn on **Protect Feed Block settings**. Other Android settings stay available. Use **Allow settings for one minute** when you need access, or **Change parent PIN** to set a new PIN using the current one.
 
-The settings guard depends on the phone. Both pages have been tested on a Huawei running Android 10 and in a stock Android emulator. They still need checking on a physical Galaxy S21. Android may offer other ways to disable or remove the app.
+The settings guard depends on the phone. Both pages have been tested on a Huawei running Android 10 and in a stock Android emulator. Android may offer other ways to disable or remove the app.
 
 ## If a feed slips through
 

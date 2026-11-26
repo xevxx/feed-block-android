@@ -1,8 +1,14 @@
 # Feed Check
 
+<p align="center">
+  <img src="companion/res/drawable-xxxhdpi/block_screen_cat.png" alt="Feed Check cat mascot" width="96" height="96">
+</p>
+
 Feed Check is an Android app that covers recognised Spotlight and Discover feeds in Snapchat, the Shorts player in YouTube, and Reels and Explore in Instagram. You choose which apps to filter. Feed Check temporarily mutes the phone’s media audio while it covers Spotlight, Shorts, or Reels.
 
 ## Download and set up
+
+This guide describes Feed Check v0.7.7. If the newest GitHub release is older, use the [build instructions](companion/README.md#build) to get the features below.
 
 For APK installation or Accessibility permission help, see the [Android setup guide](docs/android-setup.md). It covers Family Link and the extra Auto Blocker step on Samsung Galaxy phones.
 
@@ -13,6 +19,8 @@ For APK installation or Accessibility permission help, see the [Android setup gu
 5. To filter Instagram, tap **Block Instagram Reels & Explore** under **Other feeds**. This covers the Reels tab and Explore recommendations. A video opened from Home can play. If you swipe to another Reel in that viewer, Feed Check covers it and mutes its audio. Use **Search Instagram** on the Explore block screen to open manual search.
 
 Feed Check asks you to set a six-digit parent PIN the first time you enable a blocker.
+
+To preview and choose an icon, open **More options → Block screen icon**. Cat is the default. You can also choose Goose, Frog, or Shield.
 
 Some Android versions require a separate approval before a sideloaded app can use Accessibility. [Android restricted settings](https://support.google.com/android/answer/12623953)
 

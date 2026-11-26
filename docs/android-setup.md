@@ -1,6 +1,6 @@
 # Set up Feed Block on your child’s Android phone
 
-There are two permissions you might be asked about. The first lets you install Feed Block from a downloaded file (the APK). The second lets Feed Block recognise Spotlight, Reels or Shorts when your child opens them. If you’re updating an older version, it may still be called **Feed Check** on the phone.
+There are two permissions you might be asked about. The first lets you install Feed Block from a downloaded file (the APK). The second lets Feed Block recognise Spotlight, Reels or Shorts when your child opens them.
 
 ## Install the app
 

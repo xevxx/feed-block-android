@@ -27,8 +27,6 @@ While Spotlight, Reels or Shorts is blocked, Feed Block mutes the phone’s medi
 
 If Family Link stops the install, Samsung shows an Auto Blocker warning, or the Accessibility switch is greyed out, follow the [Android setup guide](docs/android-setup.md).
 
-This guide describes v0.7.9. An older release may say **Feed Check** and offer fewer switches. See the [build instructions](companion/README.md#build) if you want to build this version yourself.
-
 ## What can my child change?
 
 They can choose the face on the block screen under **More options → Block screen icon**. The cat is the default, with a goose, frog and shield to choose from.

@@ -1,10 +1,15 @@
 <resources>
     <string name="app_name">Feed Check</string>
-    <string name="service_description">Feed Check covers recognised Spotlight and Discover content in Snapchat. An optional parent PIN guard covers Feed Check’s own Accessibility and App Info pages in Android Settings.</string>
+    <string name="service_description">Feed Check covers recognised Snapchat, YouTube, and Instagram feeds that you choose to block. An optional parent PIN guard covers Feed Check’s own Accessibility and App Info pages in Android Settings.</string>
     <string name="more_options">More options</string>
+    <string name="block_screen_icon">Block screen icon</string>
+    <string name="block_screen_icon_cat">Cat</string>
+    <string name="block_screen_icon_goose">Goose</string>
+    <string name="block_screen_icon_frog">Frog</string>
+    <string name="block_screen_icon_shield">Shield</string>
     <string name="snapchat_protection">Snapchat protection</string>
     <string name="setup_needed">Set up Feed Check</string>
-    <string name="setup_detail">Enable Feed Check in Android Accessibility to start filtering Snapchat.</string>
+    <string name="setup_detail">Enable Feed Check in Android Accessibility to start filtering feeds.</string>
     <string name="blocking_on">Feed blocking is on</string>
     <string name="blocking_on_detail">Covers recognised Spotlight and Discover feeds and mutes media while Spotlight is covered.</string>
     <string name="blocking_off">Feed blocking is off</string>
@@ -12,6 +17,9 @@
     <string name="open_accessibility_settings">Open Accessibility settings</string>
     <string name="turn_on_blocking">Turn on feed blocking</string>
     <string name="pause_blocking">Pause feed blocking</string>
+    <string name="other_feeds">Other feeds</string>
+    <string name="block_named_feed">Block %1$s</string>
+    <string name="pause_named_feed">Pause %1$s blocking</string>
     <string name="parent_controls">Parent controls</string>
     <string name="guard_on_detail">Your PIN protects Feed Check’s Accessibility and App Info pages where supported.</string>
     <string name="guard_off_detail">Use your PIN to guard Feed Check’s own Accessibility and App Info pages.</string>
@@ -42,6 +50,17 @@
     <string name="go_to_chat">Go to Chat</string>
     <string name="chat_unavailable">Chat is unavailable from this screen</string>
     <string name="go_back">Go back</string>
-    <string name="leave_snapchat">Leave Snapchat</string>
+    <string name="leave_app">Leave %1$s</string>
+    <string name="app_snapchat">Snapchat</string>
+    <string name="app_youtube">YouTube</string>
+    <string name="youtube_shorts">YouTube Shorts</string>
+    <string name="youtube_shorts_blocked">YouTube Shorts blocked</string>
+    <string name="app_instagram">Instagram</string>
+    <string name="instagram_feeds">Instagram Reels &amp; Explore</string>
+    <string name="instagram_reels_blocked">Instagram Reels blocked</string>
+    <string name="instagram_more_reels_blocked">More Reels blocked</string>
+    <string name="instagram_explore_blocked">Instagram Explore blocked</string>
+    <string name="search_instagram">Search Instagram</string>
+    <string name="search_unavailable">Search is unavailable from this screen</string>
     <string name="open_feed_check">Open Feed Check</string>
 </resources>

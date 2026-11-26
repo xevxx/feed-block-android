@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.Editable;
@@ -13,10 +14,13 @@ import android.text.InputFilter;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityManager;
 import android.view.inputmethod.EditorInfo;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckedTextView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -24,6 +28,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -34,6 +40,7 @@ public final class MainActivity extends Activity {
     private TextView status;
     private TextView blockingDetail;
     private Button blockingButton;
+    private final Map<FeedProfile, Button> otherFeedButtons = new LinkedHashMap<>();
     private TextView settingsGuardDetail;
     private Button settingsGuardButton;
     private Button temporaryAccess;
@@ -63,6 +70,16 @@ public final class MainActivity extends Activity {
         status = findViewById(R.id.blocking_status);
         blockingDetail = findViewById(R.id.blocking_detail);
         blockingButton = findViewById(R.id.blocking_action);
+        LinearLayout otherFeeds = findViewById(R.id.other_feed_controls);
+        for (FeedProfile profile : FeedProfile.SUPPORTED) {
+            if (profile != FeedProfile.SNAPCHAT) {
+                Button button = (Button) getLayoutInflater().inflate(R.layout.feed_profile_button, otherFeeds, false);
+                button.setOnClickListener(view -> changeBlocking(profile));
+                otherFeeds.addView(button);
+                otherFeedButtons.put(profile, button);
+            }
+        }
+        otherFeeds.setVisibility(otherFeedButtons.isEmpty() ? View.GONE : View.VISIBLE);
         settingsGuardDetail = findViewById(R.id.settings_guard_detail);
         settingsGuardButton = findViewById(R.id.settings_guard_action);
         settingsGuardButton.setOnClickListener(view -> changeSettingsGuard());
@@ -82,7 +99,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        new SpotlightAudio(this).restore();
+        new FeedAudio(this).restore();
         boolean finishedCheck = state.getBoolean(FeedCheckService.ACTIVE, false);
         if (finishedCheck) {
             state.edit().putBoolean(FeedCheckService.ACTIVE, false).apply();
@@ -111,7 +128,37 @@ public final class MainActivity extends Activity {
             openAccessibilitySettings();
             return true;
         });
+        menu.getMenu().add(R.string.block_screen_icon).setOnMenuItemClickListener(item -> {
+            showBlockScreenIconOptions();
+            return true;
+        });
         menu.show();
+    }
+
+    private void showBlockScreenIconOptions() {
+        BlockScreenIcon[] icons = BlockScreenIcon.values();
+        CharSequence[] labels = new CharSequence[icons.length];
+        for (int index = 0; index < icons.length; index++) {
+            labels[index] = getText(icons[index].label);
+        }
+        int previewSize = dp(40);
+        ArrayAdapter<CharSequence> choices = new ArrayAdapter<>(this, R.layout.block_screen_icon_option, labels) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                CheckedTextView row = (CheckedTextView) super.getView(position, convertView, parent);
+                Drawable preview = getContext().getDrawable(icons[position].drawable);
+                preview.setBounds(0, 0, previewSize, previewSize);
+                row.setCompoundDrawablesRelative(preview, null, null, null);
+                return row;
+            }
+        };
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.block_screen_icon)
+                .setSingleChoiceItems(choices, BlockScreenIcon.selected(state).ordinal(), (dialog, index) -> {
+                    icons[index].save(state);
+                    dialog.dismiss();
+                })
+                .show();
     }
 
     private void openAccessibilitySettings() {
@@ -167,7 +214,7 @@ public final class MainActivity extends Activity {
             status.setText(blocking ? R.string.blocking_on : R.string.blocking_off);
             blockingDetail.setText(blocking ? R.string.blocking_on_detail : R.string.blocking_off_detail);
             blockingButton.setText(blocking ? R.string.pause_blocking : R.string.turn_on_blocking);
-            blockingButton.setOnClickListener(view -> changeBlocking());
+            blockingButton.setOnClickListener(view -> changeBlocking(FeedProfile.SNAPCHAT));
         } else {
             status.setText(R.string.setup_needed);
             blockingDetail.setText(R.string.setup_detail);
@@ -184,18 +231,27 @@ public final class MainActivity extends Activity {
         temporaryAccess.setVisibility(settingsGuard ? View.VISIBLE : View.GONE);
         temporaryAccess.setEnabled(enabled);
         changePinButton.setVisibility(state.contains(PIN) ? View.VISIBLE : View.GONE);
+        for (Map.Entry<FeedProfile, Button> entry : otherFeedButtons.entrySet()) {
+            FeedProfile profile = entry.getKey();
+            Button button = entry.getValue();
+            button.setEnabled(enabled);
+            int label = profile.enabled(state) ? R.string.pause_named_feed : R.string.block_named_feed;
+            button.setText(getString(label, getString(profile.feedName)));
+        }
     }
 
-    private void changeBlocking() {
-        boolean blocking = state.getBoolean(FeedCheckService.BLOCKING, false);
+    private void changeBlocking(FeedProfile profile) {
+        boolean blocking = profile.enabled(state);
         String verifier = state.getString(PIN, null);
         if (!blocking && verifier != null) {
-            state.edit().putBoolean(FeedCheckService.BLOCKING, true).apply();
+            state.edit().putBoolean(profile.preference, true).apply();
             refreshControls();
             return;
         }
-        showPinPrompt(blocking ? "Pause feed blocking" : "Create a parent PIN", blocking ? "Pause" : "Turn on",
-                null, edit -> edit.putBoolean(FeedCheckService.BLOCKING, !blocking));
+        String pauseTitle = profile == FeedProfile.SNAPCHAT ? getString(R.string.pause_blocking)
+                : getString(R.string.pause_named_feed, getString(profile.feedName));
+        showPinPrompt(blocking ? pauseTitle : "Create a parent PIN", blocking ? "Pause" : "Turn on",
+                null, edit -> edit.putBoolean(profile.preference, !blocking));
     }
 
     private void changeSettingsGuard() {
@@ -213,8 +269,8 @@ public final class MainActivity extends Activity {
             Consumer<SharedPreferences.Editor> applyChange) {
         String verifier = state.getString(PIN, null);
         boolean creating = verifier == null;
-        if (creating && (state.getBoolean(FeedCheckService.BLOCKING, false)
-                || state.getBoolean(ProtectedSettings.ENABLED, false))) {
+        if (creating && (state.getBoolean(ProtectedSettings.ENABLED, false)
+                || FeedProfile.SUPPORTED.stream().anyMatch(profile -> profile.enabled(state)))) {
             Toast.makeText(this, "The parent PIN could not be loaded", Toast.LENGTH_LONG).show();
             return;
         }
@@ -347,7 +403,7 @@ public final class MainActivity extends Activity {
     }
 
     private void startCheck() {
-        Intent launch = getPackageManager().getLaunchIntentForPackage(FeedCheckService.SNAPCHAT);
+        Intent launch = getPackageManager().getLaunchIntentForPackage(FeedProfile.SNAPCHAT.packageName);
         if (launch == null) {
             Toast.makeText(this, "Install Snapchat to start a check", Toast.LENGTH_LONG).show();
             return;
@@ -359,7 +415,7 @@ public final class MainActivity extends Activity {
 
     private String describe(int markers) {
         StringBuilder description = new StringBuilder();
-        for (FeedCheckService.Marker marker : FeedCheckService.Marker.values()) {
+        for (FeedProfile.SnapchatMarker marker : FeedProfile.SnapchatMarker.values()) {
             if ((markers & marker.bit) != 0) {
                 if (description.length() > 0) {
                     description.append('\n');

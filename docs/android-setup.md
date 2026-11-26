@@ -9,7 +9,7 @@ Follow these steps on the Android phone where Feed Check will run. Which approva
 
 ## Install the APK
 
-1. Download the signed Feed Check APK from [GitHub Releases](https://github.com/xevxx/snapchatfeedcontrol/releases) and open the downloaded file.
+1. Download the signed Feed Check APK from [GitHub Releases](https://github.com/xevxx/feed-check-android/releases) and open the downloaded file.
 2. If Android asks for installation permission, open **Settings** from the prompt and turn on **Allow from this source** for the app opening the APK, such as your browser or file manager. You can also search Android Settings for **Install unknown apps**. Return to the APK and tap **Install**. [Google’s APK installation guide](https://support.google.com/pixelphone/answer/7391672) · [Samsung install permissions guide](https://www.samsung.com/us/support/troubleshoot/TSG10001913/)
 
 After Feed Check is installed, restore any installation settings you changed. Turn Auto Blocker back on if you turned it off, and restore the Family Link and **Install unknown apps** settings to their previous values.

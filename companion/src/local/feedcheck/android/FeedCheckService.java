@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
@@ -18,30 +19,44 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public final class FeedCheckService extends AccessibilityService {
-    static final String SNAPCHAT = "com.snapchat.android";
     static final String ACTIVE = "active";
     static final String LAST = "last";
     static final String OBSERVED = "observed";
-    static final String BLOCKING = "blocking";
+    static final String BLOCKING = FeedProfile.SNAPCHAT.preference;
     static final int NO_WINDOW = -1;
     private static final long CONFIRM_DELAY = 180;
     private static final long OVERLAY_CHECK_DELAY = 250;
-    private static final String CHAT_TAB_ID = SNAPCHAT + ":id/ngs_chat_icon_container";
+    private static final int NO_REEL_INDEX = -1;
+    private static final String INSTAGRAM_REELS_PAGER_ID =
+            FeedProfile.INSTAGRAM.packageName + ":id/" + FeedProfile.INSTAGRAM_REELS_PAGER;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable confirm = this::confirmScreen;
     private final Runnable checkOverlay = this::checkOverlayWindow;
     private final Runnable settingsAccessExpired = this::recheckSettings;
-    private final SharedPreferences.OnSharedPreferenceChangeListener settingsPreference = (prefs, key) -> {
+    private final SharedPreferences.OnSharedPreferenceChangeListener eventPackagesPreference = (prefs, key) -> {
         if (ProtectedSettings.ENABLED.equals(key)) {
-            updateEventPackages(prefs.getBoolean(key, false));
+            updateEventPackages(prefs);
+            return;
+        }
+        for (FeedProfile profile : FeedProfile.SUPPORTED) {
+            if (profile != FeedProfile.SNAPCHAT && profile.preference.equals(key)) {
+                if (profile == FeedProfile.INSTAGRAM) {
+                    inlineReelsWindow = NO_WINDOW;
+                }
+                updateEventPackages(prefs);
+                return;
+            }
         }
     };
     private Screen pending;
@@ -50,59 +65,45 @@ public final class FeedCheckService extends AccessibilityService {
     private int receivedEvents;
     private int lastSample = NO_WINDOW;
     private int shownOverlays;
+    private int inlineReelsWindow = NO_WINDOW;
+    private int firstReelIndex = NO_REEL_INDEX;
+    private boolean moreReelsBlocked;
     private boolean overlayRejected;
-    private SpotlightAudio spotlightAudio;
+    private FeedAudio feedAudio;
     private ProtectedSettings protectedSettings;
-
-    enum Marker {
-        SPOTLIGHT("Spotlight", "spotlight_container"),
-        DISCOVER_CARD("Discover card", "df_large_story"),
-        CHAT_LIST("Chat message list", "chat_message_list"),
-        CHAT_INPUT("Chat input", "chat_input_text_field");
-
-        final String label;
-        final String viewId;
-        final int bit;
-
-        Marker(String label, String viewId) {
-            this.label = label;
-            this.viewId = SNAPCHAT + ":id/" + viewId;
-            this.bit = 1 << ordinal();
-        }
-
-        static boolean identifiesFeed(int markers) {
-            int feed = SPOTLIGHT.bit | DISCOVER_CARD.bit;
-            int chat = CHAT_LIST.bit | CHAT_INPUT.bit;
-            return (markers & feed) != 0 && (markers & chat) == 0;
-        }
-    }
 
     private static final class Screen {
         final int window;
-        final int markers;
+        final FeedProfile profile;
+        final FeedProfile.Rule feed;
+        final int snapchatMarkers;
         final ProtectedSettings.Page settingsPage;
-        final boolean chatAvailable;
+        final FeedProfile.Shortcut shortcut;
 
-        Screen(int window, int markers, ProtectedSettings.Page settingsPage, boolean chatAvailable) {
+        Screen(int window, FeedProfile profile, FeedProfile.Rule feed, int snapchatMarkers,
+                ProtectedSettings.Page settingsPage, FeedProfile.Shortcut shortcut) {
             this.window = window;
-            this.markers = markers;
+            this.profile = profile;
+            this.feed = feed;
+            this.snapchatMarkers = snapchatMarkers;
             this.settingsPage = settingsPage;
-            this.chatAvailable = chatAvailable;
+            this.shortcut = shortcut;
         }
 
         boolean samePage(Screen other) {
-            return other != null && window == other.window && settingsPage == other.settingsPage;
+            return other != null && window == other.window && profile == other.profile
+                    && settingsPage == other.settingsPage;
         }
 
-        boolean isSpotlight() {
-            return (markers & Marker.SPOTLIGHT.bit) != 0;
+        boolean muteMedia() {
+            return feed != null && feed.muteMedia;
         }
 
         int heading() {
             if (settingsPage != null) {
                 return R.string.parent_access_required;
             }
-            return isSpotlight() ? R.string.spotlight_blocked : R.string.discover_blocked;
+            return feed.heading;
         }
     }
 
@@ -113,19 +114,27 @@ public final class FeedCheckService extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
-        spotlightAudio = new SpotlightAudio(this);
-        spotlightAudio.restore();
+        feedAudio = new FeedAudio(this);
+        feedAudio.restore();
         protectedSettings = new ProtectedSettings(this);
         SharedPreferences preferences = state(this);
-        preferences.registerOnSharedPreferenceChangeListener(settingsPreference);
-        updateEventPackages(preferences.getBoolean(ProtectedSettings.ENABLED, false));
+        preferences.registerOnSharedPreferenceChangeListener(eventPackagesPreference);
+        updateEventPackages(preferences);
     }
 
-    private void updateEventPackages(boolean watchSettings) {
+    private void updateEventPackages(SharedPreferences preferences) {
         AccessibilityServiceInfo info = getServiceInfo();
         if (info != null) {
-            info.packageNames = watchSettings ? new String[] {SNAPCHAT, ProtectedSettings.PACKAGE}
-                    : new String[] {SNAPCHAT};
+            List<String> packages = new ArrayList<>();
+            for (FeedProfile profile : FeedProfile.SUPPORTED) {
+                if (profile == FeedProfile.SNAPCHAT || profile.enabled(preferences)) {
+                    packages.add(profile.packageName);
+                }
+            }
+            if (preferences.getBoolean(ProtectedSettings.ENABLED, false)) {
+                packages.add(ProtectedSettings.PACKAGE);
+            }
+            info.packageNames = packages.toArray(new String[0]);
             setServiceInfo(info);
         }
     }
@@ -146,23 +155,29 @@ public final class FeedCheckService extends AccessibilityService {
             }
             return;
         }
-        if (!SNAPCHAT.equals(source)) {
+        FeedProfile profile = FeedProfile.forPackage(source);
+        if (profile == null) {
             return;
         }
-        receivedEvents++;
-        boolean blocking = state.getBoolean(BLOCKING, false);
-        boolean checking = state.getBoolean(ACTIVE, false);
+        boolean snapchat = profile == FeedProfile.SNAPCHAT;
+        if (snapchat) {
+            receivedEvents++;
+        }
+        boolean blocking = profile.enabled(state);
+        boolean checking = snapchat && state.getBoolean(ACTIVE, false);
         if (!blocking && !checking) {
             return;
         }
-        Screen screen = currentScreen();
+        Screen screen = readScreen(currentRoot(), event);
         if (screen != null && screen.settingsPage != null) {
             return;
         }
-        lastSample = screen == null ? NO_WINDOW : screen.markers;
-        if (checking && screen != null && screen.markers != state.getInt(LAST, NO_WINDOW)) {
-            int observed = state.getInt(OBSERVED, 0) | screen.markers;
-            state.edit().putInt(LAST, screen.markers).putInt(OBSERVED, observed).apply();
+        if (snapchat) {
+            lastSample = screen != null && screen.profile == profile ? screen.snapchatMarkers : NO_WINDOW;
+            if (checking && lastSample != NO_WINDOW && lastSample != state.getInt(LAST, NO_WINDOW)) {
+                int observed = state.getInt(OBSERVED, 0) | lastSample;
+                state.edit().putInt(LAST, lastSample).putInt(OBSERVED, observed).apply();
+            }
         }
         if (blocking) {
             considerScreen(screen);
@@ -177,14 +192,14 @@ public final class FeedCheckService extends AccessibilityService {
     }
 
     private Screen currentScreen() {
-        return readScreen(currentRoot());
+        return readScreen(currentRoot(), null);
     }
 
     private AccessibilityNodeInfo currentRoot() {
         AccessibilityNodeInfo active = getRootInActiveWindow();
         if (active != null) {
             String owner = String.valueOf(active.getPackageName());
-            if (SNAPCHAT.equals(owner) || ProtectedSettings.PACKAGE.equals(owner)) {
+            if (FeedProfile.forPackage(owner) != null || ProtectedSettings.PACKAGE.equals(owner)) {
                 return active;
             }
             active.recycle();
@@ -212,7 +227,7 @@ public final class FeedCheckService extends AccessibilityService {
         }
     }
 
-    private Screen readScreen(AccessibilityNodeInfo root) {
+    private Screen readScreen(AccessibilityNodeInfo root, AccessibilityEvent event) {
         if (root == null) {
             return null;
         }
@@ -224,31 +239,69 @@ public final class FeedCheckService extends AccessibilityService {
                     return null;
                 }
                 ProtectedSettings.Page page = protectedSettings.match(root);
-                return page == null ? null : new Screen(root.getWindowId(), 0, page, false);
+                return page == null ? null : new Screen(root.getWindowId(), null, null, 0, page, null);
             }
-            if (!SNAPCHAT.equals(owner)) {
+            FeedProfile profile = FeedProfile.forPackage(owner);
+            if (profile == null || (profile != FeedProfile.SNAPCHAT && !profile.enabled(state(this)))) {
                 return null;
             }
-            int markers = 0;
-            for (Marker marker : Marker.values()) {
-                if (visibleId(root, marker.viewId)) {
-                    markers |= marker.bit;
+            Set<String> views = profile.sample(viewId -> visibleId(root, viewId, profile.requireViewBounds, false));
+            FeedProfile.Rule feed = profile.match(views,
+                    viewId -> visibleId(root, viewId, profile.requireViewBounds, true));
+            if (profile == FeedProfile.INSTAGRAM) {
+                feed = matchInstagramReels(root.getWindowId(), views, feed, event);
+            }
+            FeedProfile.Shortcut shortcut = null;
+            if (feed != null && feed.shortcut != null) {
+                AccessibilityNodeInfo control = findShortcut(root, profile, feed.shortcut);
+                if (control != null) {
+                    shortcut = feed.shortcut;
+                    control.recycle();
                 }
             }
-            AccessibilityNodeInfo chatTab = Marker.identifiesFeed(markers) ? findChatTab(root) : null;
-            boolean chatAvailable = chatTab != null;
-            if (chatAvailable) {
-                chatTab.recycle();
-            }
-            return new Screen(root.getWindowId(), markers, null, chatAvailable);
+            int snapchatMarkers = profile == FeedProfile.SNAPCHAT ? FeedProfile.SnapchatMarker.mask(views) : 0;
+            return new Screen(root.getWindowId(), profile, feed, snapchatMarkers, null, shortcut);
         } finally {
             root.recycle();
         }
     }
 
+    private FeedProfile.Rule matchInstagramReels(int window, Set<String> views, FeedProfile.Rule feed,
+            AccessibilityEvent event) {
+        if (feed != null || !FeedProfile.INSTAGRAM_MORE_REELS.matches(views)) {
+            inlineReelsWindow = NO_WINDOW;
+            return feed;
+        }
+        if (inlineReelsWindow != window) {
+            inlineReelsWindow = window;
+            firstReelIndex = NO_REEL_INDEX;
+            moreReelsBlocked = false;
+        }
+        if (!moreReelsBlocked && event != null && event.getWindowId() == window
+                && event.getEventType() == AccessibilityEvent.TYPE_VIEW_SCROLLED
+                && event.getFromIndex() >= 0 && event.getFromIndex() == event.getToIndex()) {
+            AccessibilityNodeInfo source = event.getSource();
+            if (source != null) {
+                try {
+                    if (INSTAGRAM_REELS_PAGER_ID.equals(source.getViewIdResourceName())) {
+                        int index = event.getFromIndex();
+                        if (firstReelIndex == NO_REEL_INDEX) {
+                            firstReelIndex = index;
+                        } else if (firstReelIndex != index) {
+                            moreReelsBlocked = true;
+                        }
+                    }
+                } finally {
+                    source.recycle();
+                }
+            }
+        }
+        return moreReelsBlocked ? FeedProfile.INSTAGRAM_MORE_REELS : null;
+    }
+
     private boolean restricted(Screen screen) {
         return screen != null && (screen.settingsPage != null
-                || (state(this).getBoolean(BLOCKING, false) && Marker.identifiesFeed(screen.markers)));
+                || (screen.feed != null && screen.profile.enabled(state(this))));
     }
 
     private void considerScreen(Screen screen) {
@@ -289,11 +342,11 @@ public final class FeedCheckService extends AccessibilityService {
     private void checkOverlayWindow() {
         Screen target = confirmCurrentPage(covered);
         if (target != null) {
-            if (target.heading() != covered.heading() || target.chatAvailable != covered.chatAvailable) {
+            if (target.heading() != covered.heading() || target.shortcut != covered.shortcut) {
                 updateOverlayContent(overlay, target);
             }
             covered = target;
-            spotlightAudio.update(target.isSpotlight());
+            feedAudio.update(target.muteMedia());
             handler.postDelayed(checkOverlay, OVERLAY_CHECK_DELAY);
         } else {
             hideOverlay();
@@ -303,6 +356,10 @@ public final class FeedCheckService extends AccessibilityService {
     private void showOverlay(Screen target) {
         Context themed = new ContextThemeWrapper(this, R.style.FeedCheckTheme);
         View panel = LayoutInflater.from(themed).inflate(R.layout.block_screen, null);
+        if (target.settingsPage == null) {
+            ImageView artwork = panel.findViewById(R.id.block_screen_artwork);
+            artwork.setImageResource(BlockScreenIcon.selected(state(this)).drawable);
+        }
         updateOverlayContent(panel, target);
         if (target.settingsPage != null) {
             TextView detail = panel.findViewById(R.id.block_screen_detail);
@@ -310,10 +367,10 @@ public final class FeedCheckService extends AccessibilityService {
             detail.setVisibility(View.VISIBLE);
         }
         setExitAction(panel.findViewById(R.id.block_screen_back), () -> performGlobalAction(GLOBAL_ACTION_BACK));
-        setExitAction(panel.findViewById(R.id.block_screen_chat), this::openChat);
+        setExitAction(panel.findViewById(R.id.block_screen_shortcut), this::openShortcut);
         Button exit = panel.findViewById(R.id.block_screen_exit);
         if (target.settingsPage == null) {
-            exit.setText(R.string.leave_snapchat);
+            exit.setText(getString(R.string.leave_app, getString(target.profile.appName)));
             setExitAction(exit, () -> performGlobalAction(GLOBAL_ACTION_HOME));
         } else {
             exit.setText(R.string.open_feed_check);
@@ -332,7 +389,7 @@ public final class FeedCheckService extends AccessibilityService {
             covered = target;
             shownOverlays++;
             overlayRejected = false;
-            spotlightAudio.update(target.isSpotlight());
+            feedAudio.update(target.muteMedia());
             handler.postDelayed(checkOverlay, OVERLAY_CHECK_DELAY);
         } catch (WindowManager.BadTokenException ignored) {
             // Android may revoke the service between confirmation and adding the window.
@@ -343,25 +400,33 @@ public final class FeedCheckService extends AccessibilityService {
     private void updateOverlayContent(View panel, Screen screen) {
         TextView heading = panel.findViewById(R.id.block_screen_title);
         heading.setText(screen.heading());
-        panel.findViewById(R.id.block_screen_chat).setVisibility(screen.chatAvailable ? View.VISIBLE : View.GONE);
+        Button shortcutButton = panel.findViewById(R.id.block_screen_shortcut);
+        shortcutButton.setVisibility(screen.shortcut != null ? View.VISIBLE : View.GONE);
+        if (screen.shortcut != null) {
+            shortcutButton.setText(screen.shortcut.label);
+        }
         panel.findViewById(R.id.block_screen_back).setBackgroundResource(
-                screen.chatAvailable ? R.drawable.button_secondary : R.drawable.button_primary);
+                screen.shortcut != null ? R.drawable.button_secondary : R.drawable.button_primary);
     }
 
-    private void openChat() {
+    private void openShortcut() {
+        Screen target = covered;
+        if (target == null || target.shortcut == null) {
+            return;
+        }
         AccessibilityNodeInfo root = currentRoot();
         if (root != null) {
             try {
-                if (covered != null && covered.settingsPage == null && root.getWindowId() == covered.window
-                        && SNAPCHAT.equals(String.valueOf(root.getPackageName()))) {
-                    AccessibilityNodeInfo chatTab = findChatTab(root);
-                    if (chatTab != null) {
+                if (root.getWindowId() == target.window
+                        && target.profile.packageName.equals(String.valueOf(root.getPackageName()))) {
+                    AccessibilityNodeInfo control = findShortcut(root, target.profile, target.shortcut);
+                    if (control != null) {
                         try {
-                            if (chatTab.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                            if (control.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                                 return;
                             }
                         } finally {
-                            chatTab.recycle();
+                            control.recycle();
                         }
                     }
                 }
@@ -369,16 +434,18 @@ public final class FeedCheckService extends AccessibilityService {
                 root.recycle();
             }
         }
-        Toast.makeText(this, R.string.chat_unavailable, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, target.shortcut.unavailable, Toast.LENGTH_SHORT).show();
     }
 
-    private static AccessibilityNodeInfo findChatTab(AccessibilityNodeInfo root) {
-        List<AccessibilityNodeInfo> matches = root.findAccessibilityNodeInfosByViewId(CHAT_TAB_ID);
+    private static AccessibilityNodeInfo findShortcut(AccessibilityNodeInfo root, FeedProfile profile,
+            FeedProfile.Shortcut shortcut) {
+        List<AccessibilityNodeInfo> matches = root.findAccessibilityNodeInfosByViewId(
+                profile.packageName + ":id/" + shortcut.view);
         if (matches.size() == 1) {
-            AccessibilityNodeInfo tab = matches.get(0);
-            if (tab.isVisibleToUser() && tab.isEnabled() && tab.isClickable() && !tab.isSelected()
-                    && SNAPCHAT.equals(String.valueOf(tab.getPackageName()))) {
-                return tab;
+            AccessibilityNodeInfo control = matches.get(0);
+            if (control.isVisibleToUser() && control.isEnabled() && control.isClickable() && !control.isSelected()
+                    && profile.packageName.equals(String.valueOf(control.getPackageName()))) {
+                return control;
             }
         }
         for (AccessibilityNodeInfo match : matches) {
@@ -401,17 +468,24 @@ public final class FeedCheckService extends AccessibilityService {
         handler.removeCallbacks(checkOverlay);
         covered = null;
         if (overlay != null) {
-            spotlightAudio.restore();
+            feedAudio.restore();
             getSystemService(WindowManager.class).removeViewImmediate(overlay);
             overlay = null;
         }
     }
 
-    private boolean visibleId(AccessibilityNodeInfo root, String viewId) {
+    private static boolean visibleId(AccessibilityNodeInfo root, String viewId, boolean requireViewBounds,
+            boolean requireSelection) {
         List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByViewId(viewId);
+        Rect bounds = requireViewBounds ? new Rect() : null;
         boolean visible = false;
         for (AccessibilityNodeInfo node : nodes) {
-            visible |= node.isVisibleToUser();
+            if (!visible && node.isVisibleToUser() && (!requireSelection || node.isSelected())) {
+                if (bounds != null) {
+                    node.getBoundsInScreen(bounds);
+                }
+                visible = bounds == null || !bounds.isEmpty();
+            }
             node.recycle();
         }
         return visible;
@@ -423,19 +497,21 @@ public final class FeedCheckService extends AccessibilityService {
         writer.println("Feed Check Snapchat events: " + receivedEvents);
         writer.println("Feed Check markers sampled: " + (lastSample != NO_WINDOW));
         if (lastSample != NO_WINDOW) {
-            for (Marker marker : Marker.values()) {
+            for (FeedProfile.SnapchatMarker marker : FeedProfile.SnapchatMarker.values()) {
                 writer.println("Feed Check marker " + marker.name() + ": " + ((lastSample & marker.bit) != 0));
             }
         }
         writer.println("Feed Check overlays shown: " + shownOverlays);
         writer.println("Feed Check overlay visible: " + (overlay != null));
+        writer.println("Feed Check covered app: " + (covered != null && covered.profile != null
+                ? covered.profile.packageName : "none"));
         writer.println("Feed Check overlay rejected: " + overlayRejected);
         writer.println("Feed Check settings guard: " + state(this).getBoolean(ProtectedSettings.ENABLED, false));
         writer.println("Feed Check protected Settings page: "
                 + (covered != null && covered.settingsPage != null ? covered.settingsPage.name() : "none"));
-        if (spotlightAudio != null) {
-            writer.println("Feed Check media muted: " + spotlightAudio.isMuted());
-            writer.println("Feed Check owns media mute: " + spotlightAudio.ownsMute());
+        if (feedAudio != null) {
+            writer.println("Feed Check media muted: " + feedAudio.isMuted());
+            writer.println("Feed Check owns media mute: " + feedAudio.ownsMute());
         }
     }
 
@@ -444,12 +520,13 @@ public final class FeedCheckService extends AccessibilityService {
         handler.removeCallbacks(confirm);
         handler.removeCallbacks(settingsAccessExpired);
         pending = null;
+        inlineReelsWindow = NO_WINDOW;
         hideOverlay();
     }
 
     @Override
     public void onDestroy() {
-        state(this).unregisterOnSharedPreferenceChangeListener(settingsPreference);
+        state(this).unregisterOnSharedPreferenceChangeListener(eventPackagesPreference);
         onInterrupt();
         super.onDestroy();
     }

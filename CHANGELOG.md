@@ -21,3 +21,9 @@
 - Added a Feed Check launcher icon, refreshed the home and block screens, and moved Snapchat checks into the Diagnostics menu.
 - Added a parent PIN change option that verifies the current PIN before saving a new one.
 - Named Spotlight and Discover on their block screens and added a direct **Go to Chat** action where Snapchat exposes its Chat tab.
+- Added package-scoped feed profiles and an optional blocker for the YouTube Shorts player.
+- Added optional Instagram blocking for the full-screen Reels viewer.
+- Extended the Instagram switch to cover Explore, with a shortcut to manual search. Home, Stories, and Direct messages remain available.
+- Limited Instagram Reels blocking to the dedicated Reels tab so videos opened from Home can play.
+- Covered the next Reel when a viewer opened from Home advances beyond the selected video.
+- Added Cat, Goose, Frog, and Shield previews to the block screen icon chooser. Cat is selected by default.

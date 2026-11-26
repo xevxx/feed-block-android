@@ -7,14 +7,16 @@ Feed Check uses Android Accessibility to cover recognised Spotlight and Discover
 1. Open **Feed Check**, then **Open Accessibility settings**. Find **Feed Check** under installed or downloaded services and turn it on.
 2. Return to Feed Check, tap **Turn on feed blocking**, and set a six-digit parent PIN on the phone. Blocking stays on until a parent pauses it inside Feed Check with that PIN or the Accessibility service is disabled in Android Settings.
 3. Open Snapchat and visit Spotlight and the Stories page that shows Discover cards. Check that the block screen names the feed. Try **Go to Chat** where available and verify that private chats stay usable.
+4. To enable YouTube independently, tap **Block YouTube Shorts** under **Other feeds**. Feed Check checks for the Shorts player. The YouTube Home tab and regular videos remain usable.
+5. To enable Instagram independently, tap **Block Instagram Reels & Explore** under **Other feeds**. Open Reels and Explore to check the block screens. Try **Search Instagram** from the Explore block screen, then check Home, Stories, and Direct messages.
 
 If Android restricts access for the sideloaded app, the phone owner can review the Android setting under **App info → More → Allow restricted settings**. [Android restricted settings](https://support.google.com/android/answer/12623953)
 
-The service acts only when a known feed marker is visible in the focused Snapchat window and neither chat marker is visible. Two samples are required before it displays the overlay. A direct friend Story without those markers is left alone. Feed Check does not determine friendship or prevent content downloads. The overlay can appear after a feed becomes visible, and Snapchat layout changes can affect coverage. Android Settings can disable the service independently of the parent PIN.
+For Snapchat, the service acts when a known feed marker is visible in the focused window and neither chat marker is visible. It checks the app’s screen twice before displaying the overlay. A direct friend Story without those markers is left alone. Feed Check does not determine friendship or prevent content downloads. The overlay can appear after a feed becomes visible, and app layout changes can affect coverage. Android Settings can disable the service independently of the parent PIN.
 
-## Spotlight sound
+## Media sound
 
-Feed Check temporarily mutes Android's media stream while a recognised Spotlight screen is covered. Other apps on that media stream are also quiet during this interval. The app restores the prior mute state without setting a new volume level. Reopening Feed Check recovers a pending restore if Android stopped the service abruptly.
+Feed Check temporarily mutes Android's media stream while it covers Spotlight, the YouTube Shorts player, or the Instagram Reels viewer. Other apps on that media stream are also quiet during this interval. The app restores the prior mute state without setting a new volume level. Reopening Feed Check recovers a pending restore if Android stopped the service abruptly.
 
 ## Protect Feed Check settings
 
@@ -35,6 +37,16 @@ Open **More options → Diagnostics**, tap **Start a check in Snapchat**, and op
 ## Build
 
 From the repository, run `bash companion/build.sh` with SDK platform 36, build tools 36.0.0, a JDK, and Python 3. The script signs the separate APK with a local key ignored by Git. It writes `work/snapchat-feed-control.apk` by default and accepts a different new APK path as its first argument. The app supports Android API 26 and newer.
+
+## Add support for another screen or app
+
+The screen rules are in [FeedProfile.java](src/local/feedcheck/android/FeedProfile.java). Add a rule to the app’s existing profile, or register a new profile in `SUPPORTED` with the app’s Android package name, a unique preference key, and string resources for the app, feed, and block screen.
+
+Each rule lists the resource IDs that must all be visible and any IDs that rule it out. It can also require an active selected control, such as a tab. Use the names after `:id/`. The profile checks the rules in order and the first match supplies the heading, decides whether the overlay mutes media, and can offer a shortcut to a native control. A profile can also require visible nodes to have nonempty screen bounds. Prefer IDs specific to the player or screen you want to cover. Check that normal routes in the same app, such as Home, Search, and regular playback, stay accessible.
+
+Each additional profile gets its own button under **Other feeds**. New profiles start off, and the service subscribes to their app’s Accessibility events when their blocking is enabled.
+
+On the signed-in Huawei running Instagram 458.0.0.0.72, Android exposed `clips_viewer_view_pager` both in Reels and for videos opened from Home. A selected `clips_tab` identifies the dedicated feed. In the shared viewer, Feed Check uses page indexes reported by the pager’s scroll events to let the opened clip play and cover the viewer when another clip comes into view. Explore exposes `explore_action_bar`, and the shortcut activates `action_bar_search_edit_text` to open the separate search screen. The Stories viewer has its own layout.
 
 Both inspected Snapchat APKs, 14.32.0.54 and 14.33.1.0, contain `spotlight_container`, `df_large_story`, `chat_message_list`, and `chat_input_text_field`. This proves that the resource names exist in the APKs. Whether Android reports each resource while its associated screen is open is the purpose of the on-device check. `df_large_story` covers a particular Discover card layout and provides no evidence for the whole feed.
 

@@ -4,18 +4,18 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 
-final class SpotlightAudio {
+final class FeedAudio {
     private static final String RESTORE_MEDIA = "restore_media_mute";
     private final AudioManager audio;
     private final SharedPreferences state;
 
-    SpotlightAudio(Context context) {
+    FeedAudio(Context context) {
         audio = context.getSystemService(AudioManager.class);
         state = FeedCheckService.state(context);
     }
 
-    void update(boolean spotlightCovered) {
-        if (!spotlightCovered) {
+    void update(boolean muteMedia) {
+        if (!muteMedia) {
             restore();
             return;
         }

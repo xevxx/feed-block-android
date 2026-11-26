@@ -19,6 +19,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.List;
@@ -32,6 +33,7 @@ public final class FeedCheckService extends AccessibilityService {
     static final int NO_WINDOW = -1;
     private static final long CONFIRM_DELAY = 180;
     private static final long OVERLAY_CHECK_DELAY = 250;
+    private static final String CHAT_TAB_ID = SNAPCHAT + ":id/ngs_chat_icon_container";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable confirm = this::confirmScreen;
@@ -79,15 +81,28 @@ public final class FeedCheckService extends AccessibilityService {
         final int window;
         final int markers;
         final ProtectedSettings.Page settingsPage;
+        final boolean chatAvailable;
 
-        Screen(int window, int markers, ProtectedSettings.Page settingsPage) {
+        Screen(int window, int markers, ProtectedSettings.Page settingsPage, boolean chatAvailable) {
             this.window = window;
             this.markers = markers;
             this.settingsPage = settingsPage;
+            this.chatAvailable = chatAvailable;
         }
 
         boolean samePage(Screen other) {
             return other != null && window == other.window && settingsPage == other.settingsPage;
+        }
+
+        boolean isSpotlight() {
+            return (markers & Marker.SPOTLIGHT.bit) != 0;
+        }
+
+        int heading() {
+            if (settingsPage != null) {
+                return R.string.parent_access_required;
+            }
+            return isSpotlight() ? R.string.spotlight_blocked : R.string.discover_blocked;
         }
     }
 
@@ -162,11 +177,15 @@ public final class FeedCheckService extends AccessibilityService {
     }
 
     private Screen currentScreen() {
+        return readScreen(currentRoot());
+    }
+
+    private AccessibilityNodeInfo currentRoot() {
         AccessibilityNodeInfo active = getRootInActiveWindow();
         if (active != null) {
             String owner = String.valueOf(active.getPackageName());
             if (SNAPCHAT.equals(owner) || ProtectedSettings.PACKAGE.equals(owner)) {
-                return readScreen(active);
+                return active;
             }
             active.recycle();
             if (!getPackageName().equals(owner)) {
@@ -174,15 +193,15 @@ public final class FeedCheckService extends AccessibilityService {
             }
         }
         // A tap on the overlay can make it the active window without taking input focus.
-        return overlay == null ? null : focusedScreen();
+        return overlay == null ? null : focusedRoot();
     }
 
-    private Screen focusedScreen() {
+    private AccessibilityNodeInfo focusedRoot() {
         List<AccessibilityWindowInfo> windows = getWindows();
         try {
             for (AccessibilityWindowInfo window : windows) {
                 if (window.isFocused() && window.getType() == AccessibilityWindowInfo.TYPE_APPLICATION) {
-                    return readScreen(window.getRoot());
+                    return window.getRoot();
                 }
             }
             return null;
@@ -205,7 +224,7 @@ public final class FeedCheckService extends AccessibilityService {
                     return null;
                 }
                 ProtectedSettings.Page page = protectedSettings.match(root);
-                return page == null ? null : new Screen(root.getWindowId(), 0, page);
+                return page == null ? null : new Screen(root.getWindowId(), 0, page, false);
             }
             if (!SNAPCHAT.equals(owner)) {
                 return null;
@@ -216,7 +235,12 @@ public final class FeedCheckService extends AccessibilityService {
                     markers |= marker.bit;
                 }
             }
-            return new Screen(root.getWindowId(), markers, null);
+            AccessibilityNodeInfo chatTab = Marker.identifiesFeed(markers) ? findChatTab(root) : null;
+            boolean chatAvailable = chatTab != null;
+            if (chatAvailable) {
+                chatTab.recycle();
+            }
+            return new Screen(root.getWindowId(), markers, null, chatAvailable);
         } finally {
             root.recycle();
         }
@@ -265,7 +289,11 @@ public final class FeedCheckService extends AccessibilityService {
     private void checkOverlayWindow() {
         Screen target = confirmCurrentPage(covered);
         if (target != null) {
-            spotlightAudio.update((target.markers & Marker.SPOTLIGHT.bit) != 0);
+            if (target.heading() != covered.heading() || target.chatAvailable != covered.chatAvailable) {
+                updateOverlayContent(overlay, target);
+            }
+            covered = target;
+            spotlightAudio.update(target.isSpotlight());
             handler.postDelayed(checkOverlay, OVERLAY_CHECK_DELAY);
         } else {
             hideOverlay();
@@ -275,14 +303,14 @@ public final class FeedCheckService extends AccessibilityService {
     private void showOverlay(Screen target) {
         Context themed = new ContextThemeWrapper(this, R.style.FeedCheckTheme);
         View panel = LayoutInflater.from(themed).inflate(R.layout.block_screen, null);
-        TextView heading = panel.findViewById(R.id.block_screen_title);
-        heading.setText(target.settingsPage == null ? R.string.feed_blocked : R.string.parent_access_required);
+        updateOverlayContent(panel, target);
         if (target.settingsPage != null) {
             TextView detail = panel.findViewById(R.id.block_screen_detail);
             detail.setText(target.settingsPage.label);
             detail.setVisibility(View.VISIBLE);
         }
         setExitAction(panel.findViewById(R.id.block_screen_back), () -> performGlobalAction(GLOBAL_ACTION_BACK));
+        setExitAction(panel.findViewById(R.id.block_screen_chat), this::openChat);
         Button exit = panel.findViewById(R.id.block_screen_exit);
         if (target.settingsPage == null) {
             exit.setText(R.string.leave_snapchat);
@@ -304,12 +332,59 @@ public final class FeedCheckService extends AccessibilityService {
             covered = target;
             shownOverlays++;
             overlayRejected = false;
-            spotlightAudio.update((target.markers & Marker.SPOTLIGHT.bit) != 0);
+            spotlightAudio.update(target.isSpotlight());
             handler.postDelayed(checkOverlay, OVERLAY_CHECK_DELAY);
         } catch (WindowManager.BadTokenException ignored) {
             // Android may revoke the service between confirmation and adding the window.
             overlayRejected = true;
         }
+    }
+
+    private void updateOverlayContent(View panel, Screen screen) {
+        TextView heading = panel.findViewById(R.id.block_screen_title);
+        heading.setText(screen.heading());
+        panel.findViewById(R.id.block_screen_chat).setVisibility(screen.chatAvailable ? View.VISIBLE : View.GONE);
+        panel.findViewById(R.id.block_screen_back).setBackgroundResource(
+                screen.chatAvailable ? R.drawable.button_secondary : R.drawable.button_primary);
+    }
+
+    private void openChat() {
+        AccessibilityNodeInfo root = currentRoot();
+        if (root != null) {
+            try {
+                if (covered != null && covered.settingsPage == null && root.getWindowId() == covered.window
+                        && SNAPCHAT.equals(String.valueOf(root.getPackageName()))) {
+                    AccessibilityNodeInfo chatTab = findChatTab(root);
+                    if (chatTab != null) {
+                        try {
+                            if (chatTab.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                                return;
+                            }
+                        } finally {
+                            chatTab.recycle();
+                        }
+                    }
+                }
+            } finally {
+                root.recycle();
+            }
+        }
+        Toast.makeText(this, R.string.chat_unavailable, Toast.LENGTH_SHORT).show();
+    }
+
+    private static AccessibilityNodeInfo findChatTab(AccessibilityNodeInfo root) {
+        List<AccessibilityNodeInfo> matches = root.findAccessibilityNodeInfosByViewId(CHAT_TAB_ID);
+        if (matches.size() == 1) {
+            AccessibilityNodeInfo tab = matches.get(0);
+            if (tab.isVisibleToUser() && tab.isEnabled() && tab.isClickable() && !tab.isSelected()
+                    && SNAPCHAT.equals(String.valueOf(tab.getPackageName()))) {
+                return tab;
+            }
+        }
+        for (AccessibilityNodeInfo match : matches) {
+            match.recycle();
+        }
+        return null;
     }
 
     private void setExitAction(Button button, Runnable action) {

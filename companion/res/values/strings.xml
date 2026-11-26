@@ -36,8 +36,11 @@
     <string name="diagnostics_results">Last Snapchat screen\n%1$s\n\nSeen during this check\n%2$s</string>
     <string name="start_check">Start a check in Snapchat</string>
     <string name="close">Close</string>
-    <string name="feed_blocked">Feed blocked</string>
+    <string name="spotlight_blocked">Spotlight blocked</string>
+    <string name="discover_blocked">Discover blocked</string>
     <string name="parent_access_required">Parent access required</string>
+    <string name="go_to_chat">Go to Chat</string>
+    <string name="chat_unavailable">Chat is unavailable from this screen</string>
     <string name="go_back">Go back</string>
     <string name="leave_snapchat">Leave Snapchat</string>
     <string name="open_feed_check">Open Feed Check</string>

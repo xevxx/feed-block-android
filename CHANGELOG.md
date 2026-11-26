@@ -20,3 +20,4 @@
 - Added an opt-in parent-PIN guard for Feed Check’s App Info and Accessibility details, with a one-minute unlock for maintenance.
 - Added a Feed Check launcher icon, refreshed the home and block screens, and moved Snapchat checks into the Diagnostics menu.
 - Added a parent PIN change option that verifies the current PIN before saving a new one.
+- Named Spotlight and Discover on their block screens and added a direct **Go to Chat** action where Snapchat exposes its Chat tab.

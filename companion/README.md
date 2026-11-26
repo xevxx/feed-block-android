@@ -1,12 +1,12 @@
 # Feed Check
 
-Feed Check uses Android Accessibility to cover recognised Spotlight and Discover content with **Feed blocked**, **Go back**, and **Leave Snapchat**. The user chooses when to go back or leave. Feed Check keeps the official Snapchat package installed.
+Feed Check uses Android Accessibility to cover recognised Spotlight and Discover content with **Spotlight blocked** or **Discover blocked**. **Go to Chat** selects Snapchat’s Chat tab when it is available on that screen. **Go back** follows Android’s back navigation and can land on another blocked feed. **Leave Snapchat** goes to the Android home screen.
 
 ## Turn on blocking
 
 1. Open **Feed Check**, then **Open Accessibility settings**. Find **Feed Check** under installed or downloaded services and turn it on.
 2. Return to Feed Check, tap **Turn on feed blocking**, and set a six-digit parent PIN on the phone. Blocking stays on until a parent pauses it inside Feed Check with that PIN or the Accessibility service is disabled in Android Settings.
-3. Open Snapchat and visit Spotlight and the Stories page that shows Discover cards. Check that **Feed blocked** stays on screen until you use **Go back** or leave. Open a private chat separately to verify it stays usable.
+3. Open Snapchat and visit Spotlight and the Stories page that shows Discover cards. Check that the block screen names the feed. Try **Go to Chat** where available and verify that private chats stay usable.
 
 If Android restricts access for the sideloaded app, the phone owner can review the Android setting under **App info → More → Allow restricted settings**. [Android restricted settings](https://support.google.com/android/answer/12623953)
 

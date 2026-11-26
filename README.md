@@ -7,7 +7,7 @@ Feed Check is an Android companion for Snapchat. It covers recognised Spotlight 
 1. Download the signed Feed Check APK from [GitHub Releases](https://github.com/xevxx/snapchatfeedcontrol/releases) and install it on Android 8.0 or newer. Keep the official Snapchat app installed alongside it.
 2. In Feed Check, tap **Open Accessibility settings**. Open the installed or downloaded services list, choose **Feed Check**, and enable it.
 3. Return to Feed Check, tap **Turn on feed blocking**, and set a six-digit parent PIN.
-4. Open Snapchat and check Spotlight, a Stories page with Discover cards, and a private chat on your phone. Covered feeds show **Feed blocked** with **Go back** and **Leave Snapchat**.
+4. Open Snapchat and check Spotlight, a Stories page with Discover cards, and a private chat on your phone. The block screen names the feed and offers **Go to Chat** when Snapchat’s Chat tab is available, plus **Go back** and **Leave Snapchat**.
 
 Some Android versions require a separate approval before a sideloaded app can use Accessibility. [Android restricted settings](https://support.google.com/android/answer/12623953)
 

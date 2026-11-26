@@ -44,52 +44,10 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/accessibility_setup"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/hero_background"
-            android:orientation="vertical"
-            android:padding="22dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:text="@string/snapchat_protection"
-                android:textColor="@color/brand_mint"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/blocking_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="7dp"
-                android:accessibilityLiveRegion="polite"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@android:color/white"
-                android:textSize="30sp" />
-
-            <TextView
-                android:id="@+id/blocking_detail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:lineSpacingExtra="3dp"
-                android:textColor="@color/brand_light_text"
-                android:textSize="16sp" />
-
-            <Button
-                android:id="@+id/blocking_action"
-                style="@style/FeedCheckButton.Primary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="21dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/other_feed_controls"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginBottom="14dp"
             android:background="@drawable/card_background"
             android:orientation="vertical"
             android:padding="20dp"
@@ -98,10 +56,44 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:lineSpacingExtra="3dp"
+                android:text="@string/setup_detail"
+                android:textColor="@color/ink_muted"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/accessibility_setup_action"
+                style="@style/FeedCheckButton.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/open_accessibility_settings" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card_background"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
                 android:fontFamily="sans-serif-medium"
-                android:text="@string/other_feeds"
+                android:text="@string/feed_blocking"
                 android:textColor="@color/ink"
                 android:textSize="20sp" />
+
+            <LinearLayout
+                android:id="@+id/feed_controls"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:divider="@drawable/feed_profile_divider"
+                android:orientation="vertical"
+                android:showDividers="middle" />
         </LinearLayout>
 
         <LinearLayout
@@ -115,6 +107,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/parent_controls"
                 android:textColor="@color/ink"

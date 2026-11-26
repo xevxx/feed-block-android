@@ -25,6 +25,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Arrays;
@@ -37,10 +38,8 @@ public final class MainActivity extends Activity {
     private static final String PIN = "parent_pin";
     private static final String SHOW_DIAGNOSTICS = "show_diagnostics";
     private SharedPreferences state;
-    private TextView status;
-    private TextView blockingDetail;
-    private Button blockingButton;
-    private final Map<FeedProfile, Button> otherFeedButtons = new LinkedHashMap<>();
+    private View accessibilitySetup;
+    private final Map<FeedProfile, Switch> feedSwitches = new LinkedHashMap<>();
     private TextView settingsGuardDetail;
     private Button settingsGuardButton;
     private Button temporaryAccess;
@@ -67,27 +66,31 @@ public final class MainActivity extends Activity {
         });
 
         findViewById(R.id.more_options).setOnClickListener(this::showMenu);
-        status = findViewById(R.id.blocking_status);
-        blockingDetail = findViewById(R.id.blocking_detail);
-        blockingButton = findViewById(R.id.blocking_action);
-        LinearLayout otherFeeds = findViewById(R.id.other_feed_controls);
+        accessibilitySetup = findViewById(R.id.accessibility_setup);
+        findViewById(R.id.accessibility_setup_action).setOnClickListener(view -> openAccessibilitySettings());
+        LinearLayout feedControls = findViewById(R.id.feed_controls);
         for (FeedProfile profile : FeedProfile.SUPPORTED) {
-            if (profile != FeedProfile.SNAPCHAT) {
-                Button button = (Button) getLayoutInflater().inflate(R.layout.feed_profile_button, otherFeeds, false);
-                button.setOnClickListener(view -> changeBlocking(profile));
-                otherFeeds.addView(button);
-                otherFeedButtons.put(profile, button);
-            }
+            View row = getLayoutInflater().inflate(R.layout.feed_profile_row, feedControls, false);
+            Switch toggle = row.findViewById(R.id.feed_toggle);
+            toggle.setText(profile.appName);
+            TextView coverage = row.findViewById(R.id.feed_coverage);
+            coverage.setText(profile.coverage);
+            toggle.setOnCheckedChangeListener((button, checked) -> {
+                if (checked != profile.enabled(state)) {
+                    changeBlocking(profile);
+                }
+            });
+            feedControls.addView(row);
+            feedSwitches.put(profile, toggle);
         }
-        otherFeeds.setVisibility(otherFeedButtons.isEmpty() ? View.GONE : View.VISIBLE);
         settingsGuardDetail = findViewById(R.id.settings_guard_detail);
         settingsGuardButton = findViewById(R.id.settings_guard_action);
         settingsGuardButton.setOnClickListener(view -> changeSettingsGuard());
         temporaryAccess = findViewById(R.id.temporary_access);
         temporaryAccess.setOnClickListener(view -> showPinPrompt(
-                "Allow Feed Check settings", "Allow", null, edit -> {
+                getString(R.string.allow_settings_title), "Allow", null, edit -> {
                     ProtectedSettings.allowTemporarily();
-                    Toast.makeText(this, "Feed Check settings unlocked for one minute", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.settings_unlocked, Toast.LENGTH_SHORT).show();
                 }));
         changePinButton = findViewById(R.id.change_parent_pin);
         changePinButton.setOnClickListener(view -> changeParentPin());
@@ -208,19 +211,8 @@ public final class MainActivity extends Activity {
 
     private void refreshControls() {
         boolean enabled = serviceEnabled();
-        boolean blocking = state.getBoolean(FeedCheckService.BLOCKING, false);
         boolean settingsGuard = state.getBoolean(ProtectedSettings.ENABLED, false);
-        if (enabled) {
-            status.setText(blocking ? R.string.blocking_on : R.string.blocking_off);
-            blockingDetail.setText(blocking ? R.string.blocking_on_detail : R.string.blocking_off_detail);
-            blockingButton.setText(blocking ? R.string.pause_blocking : R.string.turn_on_blocking);
-            blockingButton.setOnClickListener(view -> changeBlocking(FeedProfile.SNAPCHAT));
-        } else {
-            status.setText(R.string.setup_needed);
-            blockingDetail.setText(R.string.setup_detail);
-            blockingButton.setText(R.string.open_accessibility_settings);
-            blockingButton.setOnClickListener(view -> openAccessibilitySettings());
-        }
+        accessibilitySetup.setVisibility(enabled ? View.GONE : View.VISIBLE);
         if (enabled) {
             settingsGuardDetail.setText(settingsGuard ? R.string.guard_on_detail : R.string.guard_off_detail);
         } else {
@@ -231,12 +223,10 @@ public final class MainActivity extends Activity {
         temporaryAccess.setVisibility(settingsGuard ? View.VISIBLE : View.GONE);
         temporaryAccess.setEnabled(enabled);
         changePinButton.setVisibility(state.contains(PIN) ? View.VISIBLE : View.GONE);
-        for (Map.Entry<FeedProfile, Button> entry : otherFeedButtons.entrySet()) {
-            FeedProfile profile = entry.getKey();
-            Button button = entry.getValue();
-            button.setEnabled(enabled);
-            int label = profile.enabled(state) ? R.string.pause_named_feed : R.string.block_named_feed;
-            button.setText(getString(label, getString(profile.feedName)));
+        for (Map.Entry<FeedProfile, Switch> entry : feedSwitches.entrySet()) {
+            Switch toggle = entry.getValue();
+            toggle.setEnabled(enabled);
+            toggle.setChecked(entry.getKey().enabled(state));
         }
     }
 
@@ -248,17 +238,18 @@ public final class MainActivity extends Activity {
             refreshControls();
             return;
         }
-        String pauseTitle = profile == FeedProfile.SNAPCHAT ? getString(R.string.pause_blocking)
-                : getString(R.string.pause_named_feed, getString(profile.feedName));
+        // Keep the saved switch position while the PIN prompt is open.
+        refreshControls();
+        String pauseTitle = getString(R.string.pause_named_feed, getString(profile.appName));
         showPinPrompt(blocking ? pauseTitle : "Create a parent PIN", blocking ? "Pause" : "Turn on",
                 null, edit -> edit.putBoolean(profile.preference, !blocking));
     }
 
     private void changeSettingsGuard() {
         boolean enabled = state.getBoolean(ProtectedSettings.ENABLED, false);
-        showPinPrompt(enabled ? "Turn off Settings guard" : "Protect Feed Check settings",
+        showPinPrompt(enabled ? getString(R.string.disable_guard) : getString(R.string.enable_guard),
                 enabled ? "Turn off" : "Protect", enabled ? null
-                        : "Protects only Feed Check’s Accessibility controls and App Info when Android exposes them.",
+                        : getString(R.string.guard_confirmation),
                 edit -> {
                     ProtectedSettings.endTemporaryAccess();
                     edit.putBoolean(ProtectedSettings.ENABLED, !enabled);

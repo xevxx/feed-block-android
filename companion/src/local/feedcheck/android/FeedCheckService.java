@@ -382,7 +382,7 @@ public final class FeedCheckService extends AccessibilityService {
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.OPAQUE);
-        layout.setTitle("Feed Check");
+        layout.setTitle(getString(R.string.app_name));
         try {
             getSystemService(WindowManager.class).addView(panel, layout);
             overlay = panel;
@@ -493,25 +493,25 @@ public final class FeedCheckService extends AccessibilityService {
 
     @Override
     protected void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
-        writer.println("Feed Check blocking: " + state(this).getBoolean(BLOCKING, false));
-        writer.println("Feed Check Snapchat events: " + receivedEvents);
-        writer.println("Feed Check markers sampled: " + (lastSample != NO_WINDOW));
+        writer.println("Feed Block blocking: " + state(this).getBoolean(BLOCKING, false));
+        writer.println("Feed Block Snapchat events: " + receivedEvents);
+        writer.println("Feed Block markers sampled: " + (lastSample != NO_WINDOW));
         if (lastSample != NO_WINDOW) {
             for (FeedProfile.SnapchatMarker marker : FeedProfile.SnapchatMarker.values()) {
-                writer.println("Feed Check marker " + marker.name() + ": " + ((lastSample & marker.bit) != 0));
+                writer.println("Feed Block marker " + marker.name() + ": " + ((lastSample & marker.bit) != 0));
             }
         }
-        writer.println("Feed Check overlays shown: " + shownOverlays);
-        writer.println("Feed Check overlay visible: " + (overlay != null));
-        writer.println("Feed Check covered app: " + (covered != null && covered.profile != null
+        writer.println("Feed Block overlays shown: " + shownOverlays);
+        writer.println("Feed Block overlay visible: " + (overlay != null));
+        writer.println("Feed Block covered app: " + (covered != null && covered.profile != null
                 ? covered.profile.packageName : "none"));
-        writer.println("Feed Check overlay rejected: " + overlayRejected);
-        writer.println("Feed Check settings guard: " + state(this).getBoolean(ProtectedSettings.ENABLED, false));
-        writer.println("Feed Check protected Settings page: "
+        writer.println("Feed Block overlay rejected: " + overlayRejected);
+        writer.println("Feed Block settings guard: " + state(this).getBoolean(ProtectedSettings.ENABLED, false));
+        writer.println("Feed Block protected Settings page: "
                 + (covered != null && covered.settingsPage != null ? covered.settingsPage.name() : "none"));
         if (feedAudio != null) {
-            writer.println("Feed Check media muted: " + feedAudio.isMuted());
-            writer.println("Feed Check owns media mute: " + feedAudio.ownsMute());
+            writer.println("Feed Block media muted: " + feedAudio.isMuted());
+            writer.println("Feed Block owns media mute: " + feedAudio.ownsMute());
         }
     }
 

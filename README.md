@@ -1,40 +1,44 @@
-# Feed Check
+# Feed Block
 
 <p align="center">
-  <img src="companion/res/drawable-xxxhdpi/block_screen_cat.png" alt="Feed Check cat mascot" width="96" height="96">
+  <img src="companion/res/drawable-xxxhdpi/block_screen_cat.png" alt="Feed Block cat mascot" width="96" height="96">
 </p>
 
-Feed Check is an Android app that covers recognised Spotlight and Discover feeds in Snapchat, the Shorts player in YouTube, and Reels and Explore in Instagram. You choose which apps to filter. Feed Check temporarily mutes the phone’s media audio while it covers Spotlight, Shorts, or Reels.
+We made Feed Block because we wanted a little more choice over how our family uses these apps. With Feed Block, kids can chat with friends and watch videos they’ve picked, and families can choose which recommended feeds to leave switched off.
 
-## Download and set up
+It works alongside Snapchat, Instagram and YouTube on Android. Each app has its own switch. If your child opens a blocked feed, they see a message such as **Spotlight blocked**. They can tap **Go back** or leave the app.
 
-This guide describes Feed Check v0.7.7. If the newest GitHub release is older, use the [build instructions](companion/README.md#build) to get the features below.
+## What does it block?
 
-For APK installation or Accessibility permission help, see the [Android setup guide](docs/android-setup.md). It covers Family Link and the extra Auto Blocker step on Samsung Galaxy phones.
+| App | With blocking turned on |
+| --- | --- |
+| Snapchat | Opening Spotlight brings up the block message. You’ll see a **Discover blocked** message on the Stories screen when Feed Block recognises a Discover card. Chats stay available. A friend’s Story opened directly can still play. **Go to Chat** takes you straight back to conversations when Snapchat shows its Chat tab. |
+| Instagram | Opening the Reels tab or the Explore grid brings up a block message. A video you open from Home can play. Swipe to the next Reel and the block screen appears. Home, Stories and DMs stay available, and **Search Instagram** opens search from the blocked Explore screen. |
+| YouTube | Opening the Shorts player brings up the block screen. You can still search for videos and watch them in the regular player. |
 
-1. Download the signed Feed Check APK from [GitHub Releases](https://github.com/xevxx/feed-check-android/releases) and install it on Android 8.0 or newer.
-2. In Feed Check, tap **Open Accessibility settings**. Open the installed or downloaded services list, choose **Feed Check**, and enable it.
-3. To filter Snapchat, tap **Turn on feed blocking**. Open the official Snapchat app and check Spotlight, a Stories page with Discover cards, and a private chat. The block screen names the feed and offers **Go to Chat** when Snapchat’s Chat tab is available.
-4. To filter YouTube, tap **Block YouTube Shorts** under **Other feeds**. Open the official YouTube app to check a Short and a regular video.
-5. To filter Instagram, tap **Block Instagram Reels & Explore** under **Other feeds**. This covers the Reels tab and Explore recommendations. A video opened from Home can play. If you swipe to another Reel in that viewer, Feed Check covers it and mutes its audio. Use **Search Instagram** on the Explore block screen to open manual search.
+While Spotlight, Reels or Shorts is blocked, Feed Block mutes the phone’s media audio so the clip doesn’t keep playing out loud. It restores the previous sound setting when you leave.
 
-Feed Check asks you to set a six-digit parent PIN the first time you enable a blocker.
+## Set it up
 
-To preview and choose an icon, open **More options → Block screen icon**. Cat is the default. You can also choose Goose, Frog, or Shield.
+1. On the phone your child uses (Android 8 or later), download and install the signed APK from [GitHub Releases](https://github.com/xevxx/feed-block-android/releases).
+2. Open Feed Block and tap **Open Accessibility settings**. Select **Feed Block** under installed or downloaded services and turn it on. This lets the app recognise a feed when it opens. The check runs on the phone. Feed Block has no internet permission.
+3. Back in **Feed blocking**, turn on the apps you want. The first switch asks you to set a six-digit parent PIN. You’ll need it to pause blocking.
+4. Try one blocked feed and one thing your child wants to keep using. For example, open Spotlight, then go back and send a chat.
 
-Some Android versions require a separate approval before a sideloaded app can use Accessibility. [Android restricted settings](https://support.google.com/android/answer/12623953)
+If Family Link stops the install, Samsung shows an Auto Blocker warning, or the Accessibility switch is greyed out, follow the [Android setup guide](docs/android-setup.md).
 
-## Parent controls
+This guide describes v0.7.9. An older release may say **Feed Check** and offer fewer switches. See the [build instructions](companion/README.md#build) if you want to build this version yourself.
 
-- Pausing blocking for any app requires the parent PIN.
-- **Protect Feed Check settings** adds a PIN guard to Feed Check’s own Accessibility details and App Info where supported. Android Settings and the Accessibility services list remain usable.
-- **Allow settings for one minute** temporarily unlocks the guarded pages for maintenance.
-- **Change parent PIN** appears after you set a PIN. Enter the current PIN and the new PIN twice.
+## What can my child change?
 
-## Compatibility
+They can choose the face on the block screen under **More options → Block screen icon**. The cat is the default, with a goose, frog and shield to choose from.
 
-Feed Check recognises specific app layouts. A feed may appear briefly before it is covered, and app or Android updates can change which screens are recognised. The Settings guard was verified on a Huawei phone running Android 10 and in a stock Android emulator. Samsung Galaxy S21 Settings coverage still needs testing on the device.
+Pausing a feed requires the parent PIN. To also ask for the PIN when someone opens Feed Block’s own Accessibility controls or App Info, turn on **Protect Feed Block settings**. Other Android settings stay available. Use **Allow settings for one minute** when you need access, or **Change parent PIN** to set a new PIN using the current one.
 
-For a Snapchat screen that goes uncovered, open **⋮ → Diagnostics** in Feed Check. The diagnostic shows the Snapchat screen identifiers it recognised during your check.
+The settings guard depends on the phone. Both pages have been tested on a Huawei running Android 10 and in a stock Android emulator. They still need checking on a physical Galaxy S21. Android may offer other ways to disable or remove the app.
+
+## If a feed slips through
+
+Feed Block looks for familiar controls on the screen. You may see a feed briefly before the block message appears, and an app update can change the layout. If a Snapchat feed stays open, use **More options → Diagnostics → Start a check in Snapchat**, visit that screen, then return to Feed Block to see what it recognised.
 
 [Build and troubleshooting notes](companion/README.md) · [Earlier Snapchat APK audit](docs/snapchat-apk-audit.md) · [Changelog](CHANGELOG.md)

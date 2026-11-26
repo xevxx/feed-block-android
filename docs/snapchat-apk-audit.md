@@ -30,5 +30,5 @@ On Ubuntu use `bash scripts/dependencies.sh --install-ubuntu` for system package
 
 - [Technical and compatibility report](compatibility-329222.md)
 - [Installation and official app controls](installation.md)
-- [Feed Check Accessibility companion](../companion/README.md)
+- [Feed Block Accessibility companion](../companion/README.md)
 - [Changelog](../CHANGELOG.md)

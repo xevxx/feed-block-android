@@ -1,0 +1,26 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="10dp">
+
+    <Switch
+        android:id="@+id/feed_toggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center_vertical"
+        android:saveEnabled="false"
+        android:switchPadding="12dp"
+        android:textColor="@color/ink"
+        android:textSize="17sp" />
+
+    <TextView
+        android:id="@+id/feed_coverage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/ink_muted"
+        android:textSize="14sp" />
+</LinearLayout>

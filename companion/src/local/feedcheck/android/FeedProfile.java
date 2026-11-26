@@ -56,7 +56,7 @@ final class FeedProfile {
     }
 
     static final FeedProfile SNAPCHAT = new FeedProfile("com.snapchat.android", "blocking",
-            R.string.app_snapchat, R.string.app_snapchat, false,
+            R.string.app_snapchat, R.string.snapchat_feeds, false,
             new Rule(R.string.spotlight_blocked, true, Shortcut.CHAT,
                     Collections.singletonList(SnapchatMarker.SPOTLIGHT.view), SNAPCHAT_CHAT),
             new Rule(R.string.discover_blocked, false, Shortcut.CHAT,
@@ -78,7 +78,7 @@ final class FeedProfile {
             new Rule(R.string.instagram_explore_blocked, false, Shortcut.SEARCH,
                     Collections.singletonList("explore_action_bar"), Collections.emptyList()));
 
-    static final List<FeedProfile> SUPPORTED = Collections.unmodifiableList(Arrays.asList(SNAPCHAT, YOUTUBE, INSTAGRAM));
+    static final List<FeedProfile> SUPPORTED = Collections.unmodifiableList(Arrays.asList(SNAPCHAT, INSTAGRAM, YOUTUBE));
 
     static final class Rule {
         final int heading;
@@ -113,17 +113,17 @@ final class FeedProfile {
     final String packageName;
     final String preference;
     final int appName;
-    final int feedName;
+    final int coverage;
     final boolean requireViewBounds;
     private final Rule[] rules;
     private final Set<String> viewNames = new LinkedHashSet<>();
 
-    private FeedProfile(String packageName, String preference, int appName, int feedName,
+    private FeedProfile(String packageName, String preference, int appName, int coverage,
             boolean requireViewBounds, Rule... rules) {
         this.packageName = packageName;
         this.preference = preference;
         this.appName = appName;
-        this.feedName = feedName;
+        this.coverage = coverage;
         this.requireViewBounds = requireViewBounds;
         this.rules = rules;
         for (Rule rule : rules) {

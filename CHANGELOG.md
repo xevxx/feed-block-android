@@ -27,3 +27,4 @@
 - Limited Instagram Reels blocking to the dedicated Reels tab so videos opened from Home can play.
 - Covered the next Reel when a viewer opened from Home advances beyond the selected video.
 - Added Cat, Goose, Frog, and Shield previews to the block screen icon chooser. Cat is selected by default.
+- Renamed the app to Feed Block and put Snapchat, Instagram, and YouTube in one Feed blocking section with matching switches.

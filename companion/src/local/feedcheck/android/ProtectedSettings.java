@@ -22,12 +22,12 @@ final class ProtectedSettings {
     private static long allowedUntil;
 
     enum Page {
-        ACCESSIBILITY("Feed Check’s Accessibility controls"),
-        APP_INFO("Feed Check’s App Info");
+        ACCESSIBILITY(R.string.protected_accessibility),
+        APP_INFO(R.string.protected_app_info);
 
-        final String label;
+        final int label;
 
-        Page(String label) {
+        Page(int label) {
             this.label = label;
         }
     }

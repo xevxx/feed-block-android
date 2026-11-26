@@ -15,6 +15,8 @@ import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import java.io.FileDescriptor;
+import java.io.PrintWriter;
 import java.util.List;
 
 public final class FeedCheckService extends AccessibilityService {
@@ -33,6 +35,10 @@ public final class FeedCheckService extends AccessibilityService {
     private int pendingWindow = NO_WINDOW;
     private int coveredWindow = NO_WINDOW;
     private LinearLayout overlay;
+    private int receivedEvents;
+    private int lastSample = NO_WINDOW;
+    private int shownOverlays;
+    private boolean overlayRejected;
 
     enum Marker {
         SPOTLIGHT("Spotlight", "spotlight_container"),
@@ -76,13 +82,15 @@ public final class FeedCheckService extends AccessibilityService {
         if (!SNAPCHAT.equals(String.valueOf(event.getPackageName()))) {
             return;
         }
+        receivedEvents++;
         SharedPreferences state = state(this);
         boolean blocking = state.getBoolean(BLOCKING, false);
         boolean checking = state.getBoolean(ACTIVE, false);
         if (!blocking && !checking) {
             return;
         }
-        Screen screen = blocking ? focusedSnapchatScreen() : readScreen(getRootInActiveWindow());
+        Screen screen = currentSnapchatScreen();
+        lastSample = screen == null ? NO_WINDOW : screen.markers;
         if (checking && screen != null && screen.markers != state.getInt(LAST, NO_WINDOW)) {
             int observed = state.getInt(OBSERVED, 0) | screen.markers;
             state.edit().putInt(LAST, screen.markers).putInt(OBSERVED, observed).apply();
@@ -90,6 +98,22 @@ public final class FeedCheckService extends AccessibilityService {
         if (blocking) {
             considerFeed(screen);
         }
+    }
+
+    private Screen currentSnapchatScreen() {
+        AccessibilityNodeInfo active = getRootInActiveWindow();
+        if (active != null) {
+            String owner = String.valueOf(active.getPackageName());
+            if (SNAPCHAT.equals(owner)) {
+                return readScreen(active);
+            }
+            active.recycle();
+            if (!getPackageName().equals(owner)) {
+                return null;
+            }
+        }
+        // A tap on the overlay can make it the active window without taking input focus.
+        return overlay == null ? null : focusedSnapchatScreen();
     }
 
     private Screen focusedSnapchatScreen() {
@@ -147,7 +171,7 @@ public final class FeedCheckService extends AccessibilityService {
         if (window == NO_WINDOW || !state(this).getBoolean(BLOCKING, false)) {
             return false;
         }
-        Screen current = focusedSnapchatScreen();
+        Screen current = currentSnapchatScreen();
         return current != null && current.window == window && Marker.identifiesFeed(current.markers);
     }
 
@@ -194,9 +218,12 @@ public final class FeedCheckService extends AccessibilityService {
             getSystemService(WindowManager.class).addView(panel, layout);
             overlay = panel;
             coveredWindow = window;
+            shownOverlays++;
+            overlayRejected = false;
             handler.postDelayed(checkOverlay, OVERLAY_CHECK_DELAY);
         } catch (WindowManager.BadTokenException ignored) {
             // Android may revoke the service between confirmation and adding the window.
+            overlayRejected = true;
         }
     }
 
@@ -231,6 +258,21 @@ public final class FeedCheckService extends AccessibilityService {
             node.recycle();
         }
         return visible;
+    }
+
+    @Override
+    protected void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
+        writer.println("Feed Check blocking: " + state(this).getBoolean(BLOCKING, false));
+        writer.println("Feed Check Snapchat events: " + receivedEvents);
+        writer.println("Feed Check markers sampled: " + (lastSample != NO_WINDOW));
+        if (lastSample != NO_WINDOW) {
+            for (Marker marker : Marker.values()) {
+                writer.println("Feed Check marker " + marker.name() + ": " + ((lastSample & marker.bit) != 0));
+            }
+        }
+        writer.println("Feed Check overlays shown: " + shownOverlays);
+        writer.println("Feed Check overlay visible: " + (overlay != null));
+        writer.println("Feed Check overlay rejected: " + overlayRejected);
     }
 
     @Override

@@ -14,3 +14,4 @@
 - Verified the private chat control case on the same phone. The user reported only the two chat identifiers.
 - Recorded that the tested Stories screen exposed a Discover card as its last sample.
 - Added an optional feed overlay with user-controlled navigation and a parent PIN to pause blocking.
+- Switched overlay detection to the active Snapchat window and observed a visible overlay over a Discover card on the connected phone.

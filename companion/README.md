@@ -17,3 +17,5 @@ The Accessibility service requests Snapchat events and checks four exact resourc
 From the repository, run `bash companion/build.sh` with SDK platform 36, build tools 36.0.0, a JDK, and Python 3. The script signs the separate APK with a local key ignored by Git. It writes `work/snapchat-feed-check.apk` by default and accepts a different new APK path as its first argument. The app supports Android API 26 and newer.
 
 Both inspected Snapchat APKs, 14.32.0.54 and 14.33.1.0, contain `spotlight_container`, `df_large_story`, `chat_message_list`, and `chat_input_text_field`. This proves that the resource names exist in the APKs. Whether Android reports each resource while its associated screen is open is the purpose of the on-device check. `df_large_story` covers a particular Discover card layout and provides no evidence for the whole feed.
+
+The signed diagnostic APK installed and reached its home screen on the connected Android 10 phone with Snapchat 14.32.0.54. Testing the actual feed screen requires enabling the service in Android Settings.

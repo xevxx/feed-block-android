@@ -4,6 +4,8 @@ Feed Check is an Android companion for Snapchat. It covers recognised Spotlight 
 
 ## Download and set up
 
+For APK installation or Accessibility permission help, see the [Android setup guide](docs/android-setup.md). It covers Family Link and the extra Auto Blocker step on Samsung Galaxy phones.
+
 1. Download the signed Feed Check APK from [GitHub Releases](https://github.com/xevxx/snapchatfeedcontrol/releases) and install it on Android 8.0 or newer. Keep the official Snapchat app installed alongside it.
 2. In Feed Check, tap **Open Accessibility settings**. Open the installed or downloaded services list, choose **Feed Check**, and enable it.
 3. Return to Feed Check, tap **Turn on feed blocking**, and set a six-digit parent PIN.

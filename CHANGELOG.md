@@ -12,3 +12,4 @@
 - Recorded the failed online sign-in with the locally signed test APK. Snapchat reported temporarily disabled access due to unusual activity.
 - Installed the separate Feed Check diagnostic on an Android 10 phone and confirmed that its Accessibility service reported Spotlight and a Discover card in Snapchat 14.32.0.54.
 - Verified the private chat control case on the same phone. The user reported only the two chat identifiers.
+- Recorded that the tested Stories screen exposed a Discover card as its last sample.

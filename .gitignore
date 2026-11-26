@@ -1,6 +1,10 @@
 /originals/
 /work/
 *.apk
+*.apk:Zone.Identifier
+*.apk.idsig
 *.dex
 *.jks
+*.p12
+*.keystore
 __pycache__/

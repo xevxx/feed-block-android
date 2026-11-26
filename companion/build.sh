@@ -6,7 +6,7 @@ project=$(dirname -- "$source_dir")
 sdk=${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}
 tools_dir=${FEED_CHECK_BUILD_TOOLS:-$sdk/build-tools/36.0.0}
 platform="$sdk/platforms/android-36/android.jar"
-output=$(realpath -m -- "${1:-$project/work/snapchat-feed-check.apk}")
+output=$(realpath -m -- "${1:-$project/work/snapchat-feed-control.apk}")
 if [[ "$output" != *.apk || -e "$output" ]]; then
     printf 'Choose a new .apk output path.\n' >&2
     exit 2
@@ -52,4 +52,4 @@ PY
 "$tools_dir/apksigner" verify "$scratch/signed.apk"
 "$tools_dir/zipalign" -c 4 "$scratch/signed.apk"
 ln -- "$scratch/signed.apk" "$output"
-printf 'Signed diagnostic APK %s\n' "$output"
+printf 'Signed Feed Check APK %s\n' "$output"

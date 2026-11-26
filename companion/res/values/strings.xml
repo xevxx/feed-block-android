@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Feed Check</string>
+    <string name="service_description">During a check you start, Feed Check matches a short list of Snapchat view identifiers. The result stays on this device.</string>
+</resources>
